@@ -155,21 +155,19 @@ data/
     .gitkeep
   processed/
     question_bank.csv
-    retrieval_index.rds
-    source_manifest.csv
     question_bank_audit.csv
     question_bank_answer_option_audit.csv
     question_bank_feedback_explanation_audit.csv
-    topic_evidence/
-    text/
 
 www/
-  visuals/
+  visuals/recreated/
   session_visuals/     # generated during local sessions; ignored by Git
 
 tutorial/
   intro_stats_study_app_tutorial.qmd
 ```
+
+The public GitHub repository intentionally excludes raw textbook PDFs, extracted textbook figures, extracted source text, local vector indexes, runtime databases, `.Renviron`, and source-derived topic-evidence files. Those assets may exist in a local proof-of-concept workspace, but they are ignored because they can contain copyrighted or private course material. A fresh clone still demonstrates the app code, question-bank schema, visual architecture, audits, and tutorial; textbook-backed retrieval assets should be rebuilt locally from permission-cleared sources.
 
 The most important files are:
 

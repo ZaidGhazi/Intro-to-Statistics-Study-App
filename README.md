@@ -31,7 +31,7 @@ Starting practice does not call the LLM or rebuild retrieval assets. It filters 
 
 ## Visual Support
 
-Practice questions can optionally include linked visuals through `visual_id`, `visual_ids`, `visual_required`, and `tutor_visual_ids`. The app only displays a visual inside the practice card when that visual is intentionally required for the question. Otherwise, visuals are treated as optional tutor aids. The quick tutor buttons are kept simple (`Give me a hint` and `Explain this concept`); if a visual is clearly relevant, the tutor can attach it to that same response. Students can also type a visual request such as “Can you show this with a graph?” in the follow-up box.
+Practice questions can optionally include linked visuals through `visual_id`, `visual_ids`, `visual_required`, and `tutor_visual_ids`. The app only displays a visual inside the practice card when that visual is intentionally required for the question. Otherwise, visuals are treated as optional tutor aids. The quick tutor buttons are kept simple (`Give me a hint` and `Explain this concept`); if a visual is clearly relevant, the tutor can attach it to that same response. Students can also type a visual request such as "Can you show this with a graph?" in the follow-up box.
 
 Tutor visual aids are attached to the specific tutor message that produced them. Each assistant turn can carry its own `visuals` metadata, caption, source/safety fields, evidence pointer, and retrieval trace. This keeps visual explanations reviewable and traceable: when a student scrolls through the conversation, the plot or image stays inside the same bubble as the explanation that referenced it.
 
@@ -46,13 +46,39 @@ The repo includes a few simple recreated SVG visuals under `www/visuals/recreate
 
 The stored question bank is intentionally broad enough for longer demo practice sessions. It includes conceptual multiple-choice, choose-best-answer, short fill-in-the-blank, and interactive-style items organized by module, topic, concept tag, and question family. Visual questions are included where the visual is central to the skill being practiced; other visual links are kept optional for tutor explanations.
 
-The current topic scope follows a standard introductory-statistics sequence similar to *The Basic Practice of Statistics*, 6th edition, especially Chapters 1–5 and 8–21. The app does not redistribute the textbook PDF or textbook figures; a public deployment should use licensed, open-license, or instructor-created source materials. The repo stores deploy-safe recreated visuals and generated practice metadata.
+The current topic scope follows a standard introductory-statistics sequence similar to *The Basic Practice of Statistics*, 6th edition, especially Chapters 1-5 and 8-21. The app does not redistribute the textbook PDF or textbook figures; a public deployment should use licensed, open-license, or instructor-created source materials. The repo stores deploy-safe recreated visuals and generated practice metadata.
 
 ## Local Proof-of-Concept Limits
 
 This repo may point to local copyrighted textbook PDFs, extracted text, generated wiki pages, and local-only visuals. Those files are intentionally ignored by Git and should not be deployed without permission review.
 
 Do not hard-code API keys. Copy `.Renviron.example` to `.Renviron` locally and fill in keys there if you want live LLM responses. The app falls back to retrieval-based responses when optional services are unavailable.
+
+## What Is Published vs. Local-Only
+
+The GitHub repository is intended to demonstrate the app architecture, workflow, tutorial, audits, deploy-safe recreated visuals, and a demo question bank. It intentionally does **not** redistribute raw textbook PDFs, extracted copyrighted figures, local API keys, runtime SQLite databases, generated session visuals, local vector indexes, extracted source text, or source-derived topic evidence files.
+
+The public repo includes files such as:
+
+- Shiny app code and modular R helpers
+- setup, smoke-test, audit, edge-case, and vitals evaluation scripts
+- a generated demo question bank and audit summaries
+- safe recreated visual assets under `www/visuals/recreated/`
+- the Quarto tutorial and screenshots
+
+Local-only files are ignored by `.gitignore`, including:
+
+- `.Renviron`
+- `data/raw/`
+- `data/processed/text/`
+- `data/processed/topic_evidence/`
+- `data/processed/retrieval_index.rds`
+- `data/processed/source_manifest.csv`
+- `data/wiki/concept_pages/*.md`, except the folder README
+- `www/session_visuals/`
+- runtime `.sqlite` / `.db` files
+
+After cloning the public repo, the app should still launch as a proof-of-concept practice app using the included question bank. Textbook-backed retrieval indexes and source-derived concept pages must be rebuilt locally from permission-cleared materials.
 
 ## Deployment / Readiness Note
 
@@ -87,7 +113,7 @@ Before any public deployment:
 ## STAT 6395 Final Project Materials
 
 - `docs/stat6395_alignment_checklist.md`: rubric and course-topic alignment checklist.
-- `tutorial/intro_stats_rag_tutor_tutorial.qmd`: Quarto tutorial draft explaining the NLP/LLM/RAG workflow.
+- `tutorial/intro_stats_study_app_tutorial.qmd`: Quarto tutorial draft explaining the NLP/LLM/RAG workflow.
 
 The final tutorial can be published online without raw copyrighted course content. The app itself should only be deployed with permission-cleared or recreated materials.
 
@@ -179,7 +205,7 @@ run_workflow_audit()
 
 The embedded tutor is designed to do two things during practice:
 
-1. **Guide without giving away the answer.** Before a student submits an answer, the tutor should avoid filling in blanks, selecting the correct option, or saying “the answer is ...”. A post-processing guardrail checks for exact answer leakage and redacts it when needed.
+1. **Guide without giving away the answer.** Before a student submits an answer, the tutor should avoid filling in blanks, selecting the correct option, or saying "the answer is ...". A post-processing guardrail checks for exact answer leakage and redacts it when needed.
 2. **Stay grounded in course evidence.** Tutor responses are built from the current question context plus retrieved course evidence. A lightweight faithfulness check runs by default and can replace weakly supported responses with a safer grounded fallback.
 
 The **Give me a hint** button favors stored hint ladders for speed. The **Explain this concept** button now uses the grounded tutor path rather than directly dumping stored concept-page text.
