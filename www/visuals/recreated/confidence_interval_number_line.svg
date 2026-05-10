@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+  <title id="title">Recreated Confidence Interval</title>
+  <desc id="desc">A number line showing an estimate and a confidence interval.</desc>
+  <rect width="720" height="420" fill="#ffffff"/>
+  <line x1="120" y1="230" x2="600" y2="230" stroke="#1f2937" stroke-width="4"/>
+  <line x1="220" y1="205" x2="220" y2="255" stroke="#4f7dbd" stroke-width="6"/>
+  <line x1="500" y1="205" x2="500" y2="255" stroke="#4f7dbd" stroke-width="6"/>
+  <line x1="220" y1="230" x2="500" y2="230" stroke="#4f7dbd" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="360" cy="230" r="16" fill="#d08c60"/>
+  <path d="M360 230 L500 160" stroke="#d08c60" stroke-width="3"/>
+  <path d="M360 230 L220 160" stroke="#d08c60" stroke-width="3"/>
+  <text x="360" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2937">Confidence interval = estimate ± margin of error</text>
+  <text x="360" y="285" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">estimate</text>
+  <text x="220" y="290" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">lower</text>
+  <text x="500" y="290" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">upper</text>
+  <text x="290" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#374151">margin</text>
+  <text x="430" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#374151">margin</text>
+</svg>

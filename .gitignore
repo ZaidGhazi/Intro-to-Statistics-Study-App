@@ -1,0 +1,62 @@
+# Secrets
+.Renviron
+.Renviron.local
+.env
+*.key
+
+# Raw / copyrighted / local-only source content
+data/raw/*
+!data/raw/.gitkeep
+data/raw/**/*.pdf
+data/raw/**/*.pptx
+data/raw/**/*.docx
+data/raw/textbook/
+THEBAS~1.PDF
+**/*textbook*.pdf
+**/*Textbook*.pdf
+**/*Anna*.pdf
+www/visuals/extracted/
+www/visuals/textbook/
+www/visuals/local_only/
+data/visuals/local_only/
+
+# Keep safe demo processed files, but ignore bulky/local caches by default
+data/processed/vector_index/
+data/processed/vitals_logs/
+data/processed/api_logs/
+data/processed/llm_logs/
+data/processed/edge_case_results.csv
+data/processed/edge_case_results.rds
+data/processed/cache/
+data/processed/*.sqlite
+data/processed/*.db
+
+# Local-only derived course/source outputs.
+# These can contain extracted or source-derived course text and file names.
+data/processed/text/
+data/processed/topic_evidence/
+data/processed/retrieval_index.rds
+data/processed/source_manifest.csv
+data/processed/topic_evidence_index.csv
+data/wiki/concept_pages/*.md
+!data/wiki/concept_pages/README.md
+
+# Runtime/session files
+www/session_visuals/*
+!www/session_visuals/.gitkeep
+cache/
+.cache/
+
+# R / RStudio
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+
+# OS clutter
+.DS_Store
+Thumbs.db
+
+# Runtime SQLite databases created by the app
+/*.sqlite
+/*.db

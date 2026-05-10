@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+  <title id="title">Recreated Scatterplot</title>
+  <desc id="desc">A scatterplot showing a positive association.</desc>
+  <rect width="720" height="420" fill="#ffffff"/>
+  <line x1="85" y1="340" x2="650" y2="340" stroke="#1f2937" stroke-width="3"/>
+  <line x1="85" y1="60" x2="85" y2="340" stroke="#1f2937" stroke-width="3"/>
+  <line x1="115" y1="310" x2="620" y2="95" stroke="#d08c60" stroke-width="4" opacity="0.8"/>
+  <g fill="#4f7dbd" opacity="0.9">
+    <circle cx="125" cy="300" r="8"/><circle cx="170" cy="278" r="8"/><circle cx="205" cy="250" r="8"/>
+    <circle cx="250" cy="260" r="8"/><circle cx="295" cy="225" r="8"/><circle cx="335" cy="210" r="8"/>
+    <circle cx="380" cy="185" r="8"/><circle cx="425" cy="170" r="8"/><circle cx="470" cy="145" r="8"/>
+    <circle cx="520" cy="130" r="8"/><circle cx="570" cy="112" r="8"/><circle cx="615" cy="98" r="8"/>
+  </g>
+  <text x="360" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2937">Scatterplot: positive association</text>
+  <text x="365" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">Explanatory variable</text>
+  <text x="38" y="210" transform="rotate(-90 38 210)" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">Response variable</text>
+</svg>

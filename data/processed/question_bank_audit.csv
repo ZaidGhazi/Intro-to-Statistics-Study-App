@@ -1,0 +1,11 @@
+module_id,n_questions,n_question_families,n_with_visuals,n_without_visuals,pct_with_visuals,n_with_hint_1,n_with_concept_explanation,n_with_solution_explanation,n_option_issues,n_feedback_explanation_issues
+cumulative_review,45,1,0,45,0,45,45,45,0,0
+module_1,45,13,4,41,8.9,45,45,45,0,0
+module_2,45,13,2,43,4.4,45,45,45,0,0
+module_3,45,11,1,44,2.2,45,45,45,0,0
+module_4,45,10,0,45,0,45,45,45,0,0
+module_5,45,14,2,43,4.4,45,45,45,0,0
+module_6,45,10,1,44,2.2,45,45,45,0,0
+module_7,45,10,1,44,2.2,45,45,45,0,0
+module_8,45,11,1,44,2.2,45,45,45,0,0
+module_9,45,8,1,44,2.2,45,45,45,0,0

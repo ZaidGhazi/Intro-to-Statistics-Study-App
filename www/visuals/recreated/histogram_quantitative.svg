@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+  <title id="title">Recreated Histogram</title>
+  <desc id="desc">A histogram for quantitative data with adjacent bins.</desc>
+  <rect width="720" height="420" fill="#ffffff"/>
+  <line x1="85" y1="340" x2="650" y2="340" stroke="#1f2937" stroke-width="3"/>
+  <line x1="85" y1="60" x2="85" y2="340" stroke="#1f2937" stroke-width="3"/>
+  <rect x="120" y="250" width="70" height="90" fill="#4f7dbd"/>
+  <rect x="190" y="190" width="70" height="150" fill="#4f7dbd"/>
+  <rect x="260" y="110" width="70" height="230" fill="#4f7dbd"/>
+  <rect x="330" y="80" width="70" height="260" fill="#4f7dbd"/>
+  <rect x="400" y="145" width="70" height="195" fill="#4f7dbd"/>
+  <rect x="470" y="225" width="70" height="115" fill="#4f7dbd"/>
+  <rect x="540" y="285" width="70" height="55" fill="#4f7dbd"/>
+  <path d="M120 340 H610" stroke="#ffffff" stroke-width="1"/>
+  <text x="360" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2937">Histogram: adjacent bins for quantitative data</text>
+  <text x="365" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">Measured values</text>
+  <text x="38" y="210" transform="rotate(-90 38 210)" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">Frequency</text>
+</svg>

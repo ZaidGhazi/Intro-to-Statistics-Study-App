@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+  <title id="title">Recreated P-value Tail Area</title>
+  <desc id="desc">A null distribution with the p-value shown as tail area beyond the observed statistic.</desc>
+  <rect width="720" height="420" fill="#ffffff"/>
+  <line x1="80" y1="330" x2="650" y2="330" stroke="#1f2937" stroke-width="3"/>
+  <path d="M90 330 C150 330 165 325 210 300 C260 270 280 185 335 120 C360 90 390 90 415 120 C470 185 490 270 540 300 C585 325 600 330 645 330" fill="none" stroke="#1f2937" stroke-width="4"/>
+  <path d="M510 330 C522 297 535 284 550 302 C590 325 605 330 645 330 Z" fill="#d08c60" opacity="0.6"/>
+  <line x1="510" y1="330" x2="510" y2="232" stroke="#d08c60" stroke-width="3"/>
+  <text x="360" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2937">P-value: tail area under the null model</text>
+  <text x="510" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">observed statistic</text>
+  <text x="585" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">p-value</text>
+  <text x="360" y="365" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">null value</text>
+</svg>

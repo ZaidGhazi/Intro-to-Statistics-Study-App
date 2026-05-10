@@ -1,0 +1,73 @@
+source_name,file_name_pattern,topic_ids,notes
+current_professor,Blank Normal Distribution Curves,normal_dist,Blank normal curve support file
+current_professor,M1D1,data_graphs,"Data types, variables, exploratory data analysis"
+current_professor,M1D2,data_graphs;descriptive_stats,Graphs and descriptive summaries
+current_professor,M1D3,descriptive_stats,Descriptive statistics
+current_professor,M2D1,relationships_regression,"Relationships, association, correlation, regression"
+current_professor,M2D2,relationships_regression,Regression continuation
+current_professor,M3D1,producing_data,"Producing data, sampling, observational studies, experiments"
+current_professor,M3D2,producing_data,Producing data continuation
+current_professor,M4D1,probability_basics,Probability basics
+current_professor,M4D2,probability_basics,Probability rules
+current_professor,M4D3,probability_basics,Probability continuation
+current_professor,M5D1,normal_dist,Normal distributions
+current_professor,M5D2,binomial_dist,Binomial distribution and binomial setting
+current_professor,M5D3,binomial_dist,Binomial distribution continuation
+current_professor,M6D1,sampling_dist,Sampling distributions
+current_professor,M6D2,sampling_dist,Sampling distributions continuation
+current_professor,M7D1,ci_prop,Confidence intervals for proportions
+current_professor,M7D2,ci_mean,Confidence intervals for means
+current_professor,M8 Overview,ht_foundations,Hypothesis testing overview
+current_professor,M8D1,ht_prop,Hypothesis tests for proportions
+current_professor,M8D2,ht_mean,Hypothesis tests for means
+current_professor,M8D3,ht_foundations,Hypothesis testing interpretation and conclusions
+current_professor,M9,uses_abuses_tests,Uses and abuses of tests
+exam_materials,Exam 1 Formula,data_graphs;descriptive_stats;relationships_regression,Exam 1 formula material
+exam_materials,Exam 2 Formula,probability_basics;normal_dist;binomial_dist;sampling_dist;ci_prop;ci_mean,Exam 2 formula material
+exam_materials,Exam 3 Formula,ht_foundations;ht_prop;ht_mean;uses_abuses_tests,Exam 3 formula material
+exam_materials,Final Exam Formula Chart,data_graphs;descriptive_stats;relationships_regression;producing_data;probability_basics;normal_dist;binomial_dist;sampling_dist;ci_prop;ci_mean;ht_foundations;ht_prop;ht_mean;uses_abuses_tests;final_review,Final formula chart
+exam_materials,Excel Template for Mod1-3,data_graphs;descriptive_stats;relationships_regression;producing_data,Excel template
+exam_materials,Excel Template for Mod4-6,probability_basics;normal_dist;binomial_dist;sampling_dist,Excel template
+exam_materials,Excel Template for Mod7-8,ci_prop;ci_mean;ht_foundations;ht_prop;ht_mean,Excel template
+exam_materials,Excel Template for FinalExam,final_review,Final exam Excel template
+dr_south,Lecture 1 -,data_graphs,Intro / course overview
+dr_south,Lecture 2 -,data_graphs,Graphs
+dr_south,Lecture 3 -,descriptive_stats,Numerical summaries
+dr_south,Lecture 4 -,normal_dist,Normal distribution
+dr_south,Lecture 5 -,normal_dist,Normal distribution continued
+dr_south,Lecture 6 -,relationships_regression,Scatterplots and correlation
+dr_south,Lecture 7 -,relationships_regression,Least squares regression
+dr_south,Lecture 8 -,relationships_regression,Regression continued
+dr_south,Lecture 9 -,final_review,Exam I review
+dr_south,Lecture 10 -,producing_data,Sampling design
+dr_south,Lecture 11 -,producing_data,Design of experiments
+dr_south,Lecture 12 -,sampling_dist,Towards statistical inference
+dr_south,Lecture 13 -,probability_basics,Randomness and probability
+dr_south,Lecture 14 -,probability_basics,Random variables
+dr_south,Lecture 15 -,probability_basics,Means and variances of random variables
+dr_south,Lecture 16 -,probability_basics,General probability rules
+dr_south,Lecture 17 -,sampling_dist,Central Limit Theorem
+dr_south,Lecture 18 -,final_review,Exam II review
+dr_south,Lecture 19 -,ci_prop;ci_mean,Estimating with confidence
+dr_south,Lecture 20 -,ci_prop;ci_mean,Estimating with confidence continued
+dr_south,Lecture 21 -,ht_foundations,Hypothesis testing
+dr_south,Lecture 22 -,ht_prop;ht_mean,Hypothesis testing part 2
+dr_south,Lecture 23 -,ht_prop;ht_mean,Hypothesis testing part 3
+dr_south,Lecture 24 -,ht_mean,Inference for population mean
+dr_south,Lecture 25 -,ht_mean,Inference for population mean continued
+dr_south,Lecture 26 -,final_review,Final exam review
+dr_south,Lecture 2 Practice,data_graphs,Graphs practice
+dr_south,Lecture 3 Practice,descriptive_stats,Numerical summaries practice
+dr_south,Lecture 4 Practice,normal_dist,Normal distribution practice
+dr_south,Lecture 6 Practice,relationships_regression,Scatterplots/correlation practice
+dr_south,Lecture 7 Practice,relationships_regression,Regression practice
+dr_south,Lecture 8 Practice,relationships_regression,Regression practice
+dr_south,Lecture 13 Practice,probability_basics,Probability practice
+dr_south,Lecture 15 Practice,probability_basics,Random variable practice
+dr_south,Lecture 16 Practice,probability_basics,Probability rules practice
+dr_south,Practice Exam 1,data_graphs;descriptive_stats;normal_dist;relationships_regression,Practice exam 1
+dr_south,Practice Exam 2,producing_data;probability_basics;sampling_dist,Practice exam 2
+dr_south,Practice Post-Exam 2,ci_prop;ci_mean;ht_foundations;ht_prop;ht_mean,Post Exam 2 practice
+dr_south,Final Exam Conceptual Review,final_review,Final conceptual review
+dr_south,Lab 4 - Exam I Review,final_review,Exam I review
+dr_south,Lab 9 - Exam II Review,final_review,Exam II review

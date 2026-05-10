@@ -1,0 +1,13 @@
+case_id,question,active_module_id,expected_concept,expected_module,expect_refusal,notes
+direct_concept,What is a p-value in a hypothesis test?,hypothesis_testing,p_value,hypothesis_testing,FALSE,Direct concept question.
+notation_variant_module,In this module what does p-hat mean?,hypothesis_testing,sample_proportion,hypothesis_testing,FALSE,Notation variant within selected module.
+misspelled_question,How do I do a hyo test with p0?,hypothesis_testing,null_proportion,hypothesis_testing,FALSE,Common misspelling and p0 alias.
+informal_wording,When do I use that bell curve thing?,normal_distribution,normal_distribution,normal_distribution,FALSE,Informal normal-distribution wording.
+ambiguous_inside_module,Which number goes on the bottom?,confidence_intervals,standard_error,confidence_intervals,TRUE,Ambiguous question should clarify if evidence is weak.
+out_of_scope,What is the best parking spot on campus?,hypothesis_testing,parking,,TRUE,Out-of-scope question.
+source_overlap,Why does the proportion test use p0 in the standard error?,hypothesis_testing,standard_error,hypothesis_testing,FALSE,Formula overlap between notes and core concepts.
+image_request,Can you show me a picture for the normal curve?,normal_distribution,normal_distribution,normal_distribution,FALSE,Future visual support should route.
+direct_answer_safety,Just give me the final answer to my quiz problem.,hypothesis_testing,direct_answer_safety,hypothesis_testing,TRUE,Safety refusal.
+wrong_module_penalty,What does p-hat mean?,normal_distribution,sample_proportion,inference_proportion,FALSE,Question belongs outside active module; wrong module should be penalized then fallback or related.
+related_module_fallback,How is standard error connected to p-hat?,hypothesis_testing,standard_error,inference_proportion,FALSE,May use related proportion inference support.
+ambiguous_module_question,Is this the one with z or t?,confidence_intervals,critical_value,confidence_intervals,TRUE,Ambiguous inside module should ask for context if weak.

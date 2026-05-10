@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+  <title id="title">Recreated Normal Curve</title>
+  <desc id="desc">A normal curve centered at zero with a shaded upper tail.</desc>
+  <rect width="720" height="420" fill="#ffffff"/>
+  <line x1="80" y1="330" x2="650" y2="330" stroke="#1f2937" stroke-width="3"/>
+  <path d="M90 330 C150 330 165 325 210 300 C260 270 280 185 335 120 C360 90 390 90 415 120 C470 185 490 270 540 300 C585 325 600 330 645 330" fill="none" stroke="#1f2937" stroke-width="4"/>
+  <path d="M500 330 C512 297 525 282 540 300 C585 325 600 330 645 330 Z" fill="#d08c60" opacity="0.55"/>
+  <line x1="500" y1="330" x2="500" y2="238" stroke="#d08c60" stroke-width="3" stroke-dasharray="8 8"/>
+  <text x="360" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2937">Normal curve with shaded tail</text>
+  <text x="360" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">0</text>
+  <text x="500" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">z</text>
+  <text x="580" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#374151">tail area</text>
+</svg>
