@@ -48,6 +48,7 @@ run_performance_check <- function(module_ids = NULL) {
     file = c(
       "data/processed/question_bank.csv",
       "data/processed/question_bank.rds",
+      "data/processed/public_demo_chunks.csv",
       "data/processed/retrieval_index.rds",
       "data/processed/image_metadata.rds"
     ),

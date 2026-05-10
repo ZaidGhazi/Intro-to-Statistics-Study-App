@@ -143,6 +143,20 @@ load_textbook_chunks_from_disk <- function() {
   empty_chunk_table()
 }
 
+load_public_demo_chunks <- function(path = "data/processed/public_demo_chunks.csv") {
+  if (!fs::file_exists(path)) {
+    return(empty_chunk_table())
+  }
+  chunks <- tryCatch(
+    suppressMessages(readr::read_csv(path, show_col_types = FALSE, col_types = readr::cols(.default = readr::col_character()))),
+    error = function(e) tibble()
+  )
+  if (!is.data.frame(chunks) || nrow(chunks) == 0) {
+    return(empty_chunk_table())
+  }
+  coerce_chunk_schema(chunks)
+}
+
 load_concept_page_chunks <- function() {
   pages <- tryCatch(
     {
@@ -264,11 +278,12 @@ load_rag_chunks <- function(include_existing_index = TRUE, refresh = FALSE) {
     return(get(cache_key, envir = .rag_retrieval_cache, inherits = FALSE))
   }
   textbook <- load_textbook_chunks_from_disk()
+  public_demo <- load_public_demo_chunks()
   concept_pages <- load_concept_page_chunks()
   overlays <- tryCatch(ingest_professor_materials(), error = function(e) empty_chunk_table())
   vector_chunks <- if (isTRUE(include_existing_index)) load_existing_vector_chunks() else empty_chunk_table()
 
-  chunks <- bind_rows(textbook, concept_pages, overlays, vector_chunks) %>%
+  chunks <- bind_rows(textbook, public_demo, concept_pages, overlays, vector_chunks) %>%
     filter(!is.na(text), nzchar(str_squish(text))) %>%
     coerce_chunk_schema()
   assign(cache_key, chunks, envir = .rag_retrieval_cache)

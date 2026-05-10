@@ -266,6 +266,8 @@ coerce_chunk_schema <- function(chunks) {
       source_type = as.character(source_type %||% "textbook"),
       source_scope = as.character(source_scope %||% "universal_core"),
       professor_id = as.character(professor_id %||% NA_character_),
+      chapter = suppressWarnings(as.integer(chapter)),
+      section = as.character(section %||% NA_character_),
       module_id = as.character(module_id %||% NA_character_),
       topic_id = as.character(topic_id %||% module_id),
       concept_tag = as.character(concept_tag %||% topic_id),

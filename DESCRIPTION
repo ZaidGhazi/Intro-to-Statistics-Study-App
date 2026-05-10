@@ -1,0 +1,43 @@
+Package: IntroStatisticsStudyApp
+Type: Project
+Title: Introduction to Statistics Study App
+Version: 0.1.0
+Authors@R:
+    person("Zaid", "Ghazi", role = c("aut", "cre"), email = "zghazi@smu.edu")
+Description: Local proof-of-concept R/Shiny app for module-based introductory
+    statistics practice with retrieval-augmented tutor help, answer-safety
+    guardrails, and recreated visual explanations.
+License: MIT
+Encoding: UTF-8
+Depends:
+    R (>= 4.4.0)
+Imports:
+    bslib,
+    DBI,
+    digest,
+    dplyr,
+    fs,
+    ggplot2,
+    glue,
+    htmltools,
+    jsonlite,
+    markdown,
+    purrr,
+    readr,
+    RSQLite,
+    scales,
+    shiny,
+    stringr,
+    tibble,
+    tidyr
+Suggests:
+    DT,
+    ellmer,
+    officer,
+    pdftools,
+    ragnar,
+    readxl,
+    renv,
+    text2vec,
+    vitals,
+    yaml

@@ -1,6 +1,8 @@
-stat2331_required_paths <- function() {
+intro_stats_required_paths <- function() {
   c(
     "app.R",
+    "DESCRIPTION",
+    "renv.lock",
     "R/aliases.R",
     "R/retrieval.R",
     "R/tutor.R",
@@ -13,6 +15,7 @@ stat2331_required_paths <- function() {
     "R/performance_check.R",
     "data/raw",
     "data/processed",
+    "data/processed/public_demo_chunks.csv",
     "data/wiki",
     "www",
     ".Renviron.example",
@@ -21,7 +24,7 @@ stat2331_required_paths <- function() {
   )
 }
 
-stat2331_launch_packages <- function() {
+intro_stats_launch_packages <- function() {
   c(
     "shiny", "bslib", "DBI", "RSQLite", "dplyr", "tidyr", "tibble",
     "purrr", "stringr", "readr", "jsonlite", "glue", "htmltools", "fs",
@@ -29,11 +32,11 @@ stat2331_launch_packages <- function() {
   )
 }
 
-stat2331_optional_packages <- function() {
+intro_stats_optional_packages <- function() {
   c("ellmer", "vitals", "pdftools", "officer", "readxl", "digest", "text2vec", "yaml", "DT", "ragnar", "ggplot2")
 }
 
-stat2331_required_functions <- function() {
+intro_stats_required_functions <- function() {
   list(
     aliases = c("build_alias_table", "normalize_student_query", "normalize_chunk_text", "expand_query"),
     retrieval = c(
@@ -62,7 +65,7 @@ stat2331_required_functions <- function() {
   )
 }
 
-stat2331_function_files <- function() {
+intro_stats_function_files <- function() {
   c(
     aliases = "R/aliases.R",
     retrieval = "R/retrieval.R",
@@ -120,9 +123,10 @@ scan_for_potential_secrets <- function(paths = c("app.R", "R", ".Renviron.exampl
   unique(hits)
 }
 
-stat2331_data_status <- function() {
+intro_stats_data_status <- function() {
   list(
     textbook_chunks = file.exists("data/processed/textbook_chunks.rds") || file.exists("data/processed/textbook_chunks.csv"),
+    public_demo_corpus = file.exists("data/processed/public_demo_chunks.csv"),
     retrieval_index = file.exists("data/processed/retrieval_index.rds"),
     concept_page_folder = dir.exists("data/wiki/concept_pages") || dir.exists("data/wiki"),
     question_bank = file.exists("data/processed/question_bank.csv"),
@@ -130,20 +134,28 @@ stat2331_data_status <- function() {
   )
 }
 
+# Backward-compatible aliases for earlier STAT 2331-specific scripts.
+stat2331_required_paths <- intro_stats_required_paths
+stat2331_launch_packages <- intro_stats_launch_packages
+stat2331_optional_packages <- intro_stats_optional_packages
+stat2331_required_functions <- intro_stats_required_functions
+stat2331_function_files <- intro_stats_function_files
+stat2331_data_status <- intro_stats_data_status
+
 check_setup <- function(verbose = TRUE) {
-  required_paths <- stat2331_required_paths()
+  required_paths <- intro_stats_required_paths()
   path_status <- stats::setNames(file.exists(required_paths) | dir.exists(required_paths), required_paths)
 
   app_sources <- extract_app_sources()
   source_status <- stats::setNames(file.exists(app_sources), app_sources)
 
-  launch_packages <- stat2331_launch_packages()
-  optional_packages <- stat2331_optional_packages()
+  launch_packages <- intro_stats_launch_packages()
+  optional_packages <- intro_stats_optional_packages()
   launch_missing <- launch_packages[!vapply(launch_packages, requireNamespace, logical(1), quietly = TRUE)]
   optional_missing <- optional_packages[!vapply(optional_packages, requireNamespace, logical(1), quietly = TRUE)]
 
-  function_files <- stat2331_function_files()
-  required_functions <- stat2331_required_functions()
+  function_files <- intro_stats_function_files()
+  required_functions <- intro_stats_required_functions()
   function_status <- lapply(names(required_functions), function(group) {
     defined <- extract_defined_functions(function_files[[group]])
     stats::setNames(required_functions[[group]] %in% defined, required_functions[[group]])
@@ -168,7 +180,7 @@ check_setup <- function(verbose = TRUE) {
   )
 
   secret_hits <- scan_for_potential_secrets()
-  data_status <- stat2331_data_status()
+  data_status <- intro_stats_data_status()
 
   result <- list(
     paths = path_status,

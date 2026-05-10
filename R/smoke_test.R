@@ -95,6 +95,18 @@ run_smoke_test <- function(run_vitals = requireNamespace("vitals", quietly = TRU
     retrieval
   })
 
+  results <- smoke_record(results, "public demo corpus retrieval", {
+    demo_chunks <- load_public_demo_chunks()
+    if (!is.data.frame(demo_chunks) || nrow(demo_chunks) < 8) {
+      stop("Expected at least 8 public-safe demo chunks.", call. = FALSE)
+    }
+    demo_hits <- keyword_retrieve("what is a p-value?", chunks = demo_chunks, top_k = 5)
+    if (!is.data.frame(demo_hits) || nrow(demo_hits) == 0) {
+      stop("Expected the public demo corpus to retrieve evidence for a p-value query.", call. = FALSE)
+    }
+    demo_hits
+  })
+
   results <- smoke_record(results, "retrieve_evidence multi-module routing", {
     retrieval <- retrieve_evidence(
       "what is a p-value?",

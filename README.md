@@ -1,10 +1,37 @@
 # Introduction to Statistics Study App
 
+[![R checks](https://github.com/ZaidGhazi/Intro-to-Statistics-Study-App/actions/workflows/r-check.yaml/badge.svg)](https://github.com/ZaidGhazi/Intro-to-Statistics-Study-App/actions/workflows/r-check.yaml)
+
 Local proof-of-concept R/Shiny app for module-based introductory statistics practice, review, and grounded tutor help.
 
 This is a portfolio and learning project. The code and tutorial are intended to show the architecture, reproducible workflow, and LLM/NLP design choices. The current textbook-backed version is not a public student-facing deployment.
 
 The app is designed as a frictionless cold-start demo: open it, choose one or more modules, and start practicing. There is no visible login, role switcher, or production-style LMS account flow.
+
+## Quick Start
+
+From the project root in R or RStudio:
+
+```r
+source("R/check_setup.R")
+check_setup()
+
+shiny::runApp()
+```
+
+For a closer pre-demo check:
+
+```r
+source("R/smoke_test.R")
+run_smoke_test(run_vitals = FALSE)
+```
+
+If packages are missing, `check_setup()` prints the exact `install.packages()` command. For a more reproducible setup, install `renv` and restore the locked package versions:
+
+```r
+install.packages("renv")
+renv::restore()
+```
 
 ## Source Authority
 
@@ -63,6 +90,7 @@ The public repo includes files such as:
 - Shiny app code and modular R helpers
 - setup, smoke-test, audit, edge-case, and vitals evaluation scripts
 - a generated demo question bank and audit summaries
+- a small public-safe demo corpus for retrieval/RAG smoke tests
 - safe recreated visual assets under `www/visuals/recreated/`
 - the rendered HTML tutorial and screenshots
 
@@ -79,6 +107,8 @@ Local-only files are ignored by `.gitignore`, including:
 - runtime `.sqlite` / `.db` files
 
 After cloning the public repo, the app should still launch as a proof-of-concept practice app using the included question bank. Textbook-backed retrieval indexes and source-derived concept pages must be rebuilt locally from permission-cleared materials.
+
+The file `data/processed/public_demo_chunks.csv` provides a tiny synthetic/open demo corpus so retrieval and grounded tutor flows have public-safe evidence immediately after cloning. It is not a replacement for a full textbook-backed knowledge base; it is a reproducibility scaffold for portfolio review and tests.
 
 ## Deployment / Readiness Note
 
@@ -181,6 +211,13 @@ saveRDS(result$chunks, "data/processed/textbook_chunks.rds")
 ```
 
 The saved chunks are local-only by default and ignored by Git.
+
+## Reproducibility Notes
+
+- `DESCRIPTION` declares the app's required and optional packages.
+- `renv.lock` records the package versions used for this public snapshot.
+- `.github/workflows/r-check.yaml` runs the setup check and smoke test on GitHub Actions.
+- `R/check_setup.R` now exposes `intro_stats_*` helper names while keeping backward-compatible `stat2331_*` aliases for older scripts.
 
 ## Practice-bank and visual-question architecture
 
