@@ -467,6 +467,38 @@ deterministic_visual_message <- function(visual_type,
   )
 }
 
+deterministic_visual_prompt_metadata <- function(visual_type,
+                                                 module_id = NULL,
+                                                 concept_tag = NULL) {
+  visual_type <- normalize_visual_type(visual_type)
+  if (is.null(visual_type) || is.na(visual_type) || !nzchar(visual_type)) {
+    return(tibble::tibble())
+  }
+  tibble::tibble(
+    image_id = visual_type,
+    module_id = module_id %||% NA_character_,
+    topic_id = NA_character_,
+    concept_tag = concept_tag %||% visual_type,
+    source_name = "deterministic_recreated_visual",
+    source_type = "recreated_visual",
+    chapter = NA_integer_,
+    section = NA_character_,
+    page_number = NA_integer_,
+    caption = visual_caption_for_type(visual_type),
+    nearby_text = paste(visual_type, visual_caption_for_type(visual_type)),
+    vision_description = paste(
+      "A deploy-safe recreated visual rendered in R/ggplot for the student's current tutor request.",
+      visual_caption_for_type(visual_type)
+    ),
+    file_path = NA_character_,
+    thumbnail_path = NA_character_,
+    display_permission_status = "created_by_us",
+    safe_for_deployment = TRUE,
+    tags = visual_type,
+    preferred_use = "tutor"
+  )
+}
+
 save_stat2331_visual_png <- function(visual_type,
                                      message_id = NULL,
                                      module_id = NULL,
@@ -552,6 +584,7 @@ normalize_visual_type <- function(visual_type = NULL) {
     visual_type %in% c("recreated_confidence_interval_number_line", "confidence_interval_number_line", "ci_number_line", "margin_of_error_number_line") ~ "confidence_interval_number_line",
     visual_type %in% c("recreated_standard_normal_curve", "standard_normal_curve", "normal_curve_shading", "z_score_curve") ~ "standard_normal_curve",
     visual_type %in% c("recreated_scatterplot_association", "scatterplot_association", "correlation_scatterplot") ~ "scatterplot_association",
+    visual_type %in% c("time_plot", "time_series_plot", "timeplot", "line_plot_over_time") ~ "time_plot",
     visual_type %in% c("regression_residual_plot", "residual_plot", "regression_residuals") ~ "regression_residual_plot",
     visual_type %in% c("recreated_bar_chart_categorical", "bar_chart_categorical") ~ "bar_chart_categorical",
     visual_type %in% c("recreated_histogram_quantitative", "histogram_quantitative") ~ "histogram_quantitative",
@@ -569,8 +602,16 @@ choose_visual_type <- function(user_text = NULL,
                                current_question = NULL,
                                concept_tag = NULL,
                                module_id = NULL) {
+  user_only <- stringr::str_to_lower(user_text %||% "")
+  if (stringr::str_detect(user_only, "\\btime[- ]?plot\\b|over time|time series|trend over time")) return("time_plot")
+  if (stringr::str_detect(user_only, "\\bscatterplot\\b|scatter plot")) return("scatterplot_association")
+  if (stringr::str_detect(user_only, "\\bhistogram\\b")) return("histogram_quantitative")
+  if (stringr::str_detect(user_only, "\\bbar[- ]?chart\\b|bar graph")) return("bar_chart_categorical")
+  if (stringr::str_detect(user_only, "\\bboxplot\\b|box plot")) return("outlier_boxplot")
+
   combined <- question_combined_text(current_question, user_text, concept_tag, module_id)
 
+  if (stringr::str_detect(combined, "\\btime[- ]?plot\\b|over time|time series|trend over time")) return("time_plot")
   if (stringr::str_detect(combined, "residual|observed minus predicted")) return("regression_residual_plot")
   if (stringr::str_detect(combined, "scatterplot|correlation|association|regression|slope|explanatory|response")) return("scatterplot_association")
   if (stringr::str_detect(combined, "binomial|successes|trials|bins")) return("binomial_distribution_bars")
@@ -607,6 +648,7 @@ strict_question_visual_type <- function(current_question = NULL) {
   if (stringr::str_detect(combined, "p[- ]?value|tail area|rejection region") && stringr::str_detect(combined, "hypothesis|test|null|alpha|significance|shade|tail")) return("p_value_tail_area")
   if (stringr::str_detect(combined, "confidence interval|margin of error|number line|endpoint")) return("confidence_interval_number_line")
   if (stringr::str_detect(combined, "z[- ]?score|standard normal|normal curve|normal probability|shade|empirical rule")) return("standard_normal_curve")
+  if (stringr::str_detect(combined, "\\btime[- ]?plot\\b|over time|time series|trend over time")) return("time_plot")
   if (stringr::str_detect(combined, "scatterplot|correlation|association|regression|slope") && question_has_visual_language(current_question)) return("scatterplot_association")
   if (stringr::str_detect(combined, "sampling distribution|central limit|clt") && stringr::str_detect(combined, "spread|standard error|sample size|larger n|smaller n|n increases|n grows")) return("sampling_distribution_clt")
   if (stringr::str_detect(combined, "boxplot|outlier|iqr|interquartile") && stringr::str_detect(combined, "spread|quartile|iqr|five-number|five number|boxplot")) return("outlier_boxplot")
@@ -717,6 +759,28 @@ plot_comparing_groups_boxplots <- function() {
   invisible(NULL)
 }
 
+plot_time_plot <- function() {
+  months <- seq.Date(as.Date("2026-01-01"), by = "month", length.out = 12)
+  values <- c(42, 45, 48, 51, 55, 60, 64, 63, 59, 54, 49, 46)
+  df <- tibble::tibble(month = months, value = values)
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    return(
+      ggplot2::ggplot(df, ggplot2::aes(x = month, y = value)) +
+        ggplot2::geom_line(color = "#4f7cac", linewidth = 1.2) +
+        ggplot2::geom_point(color = "#d1495b", size = 2.6) +
+        ggplot2::labs(
+          title = "Time plot",
+          subtitle = "Time goes on the horizontal axis so changes over time are visible",
+          x = "Time",
+          y = "Measured value"
+        ) +
+        ggplot2::theme_minimal(base_size = 13)
+    )
+  }
+  graphics::plot(months, values, type = "b", pch = 19, col = "#4f7cac", main = "Time plot", xlab = "Time", ylab = "Measured value")
+  invisible(NULL)
+}
+
 visual_caption_for_type <- function(visual_type) {
   visual_type <- normalize_visual_type(visual_type)
   switch(
@@ -728,6 +792,7 @@ visual_caption_for_type <- function(visual_type) {
     confidence_interval_number_line = "A confidence interval is estimate ± margin of error, shown as a plausible range for the population parameter.",
     standard_normal_curve = "A z-score marks how many standard deviations a value is from the mean on the standard normal curve.",
     scatterplot_association = "A scatterplot shows the direction, form, and strength of association between two quantitative variables.",
+    time_plot = "A time plot puts time on the horizontal axis and connects measurements in time order to show trends or changes.",
     regression_residual_plot = "Residuals are the vertical gaps between observed points and the fitted regression line.",
     bar_chart_categorical = "A bar chart compares counts across categories.",
     histogram_quantitative = "A histogram shows the distribution of a quantitative variable across adjacent intervals.",
@@ -751,6 +816,7 @@ visual_response_for_type <- function(visual_type) {
     confidence_interval_number_line = paste("### Visual aid", "", "I added a number-line view of a confidence interval.", "", "- The center is the sample estimate.", "- The endpoints are estimate ± margin of error.", "- The whole interval is a plausible range for the population parameter.", "", "**Quick check:** Are you describing the sample statistic or the unknown population parameter?", sep = "\n"),
     standard_normal_curve = paste("### Visual aid", "", "I added a normal-curve view.", "", "- The center is the mean.", "- A z-score marks distance from the mean in standard-deviation units.", "- Shaded regions represent probabilities.", "", "**Quick check:** Is the value above or below the mean?", sep = "\n"),
     scatterplot_association = paste("### Visual aid", "", "I added a scatterplot view of association.", "", "- Each point represents one case.", "- The overall pattern shows direction and strength.", "- A trend does not prove causation by itself.", "", "**Quick check:** Does the problem ask about association, prediction, or causation?", sep = "\n"),
+    time_plot = paste("### Visual aid", "", "I added a time plot below.", "", "- Time is on the horizontal axis.", "- The connected points show how one measured value changes over time.", "- Look for trends, cycles, or unusual jumps.", "", "**Quick check:** What changes as you move from left to right across time?", sep = "\n"),
     regression_residual_plot = paste("### Visual aid", "", "I added a regression visual. The dashed vertical gaps show residuals.", "", "- A **residual** is observed minus predicted.", "- Points far from the line have large residuals.", "- Regression describes association and prediction, not automatic causation.", sep = "\n"),
     binomial_distribution_bars = paste("### Visual aid", "", "I added a binomial distribution. Each bar is the probability of a possible count of successes.", "", "**Quick check:** What are the fixed number of trials and the definition of success?", sep = "\n"),
     experiment_randomization_diagram = paste("### Visual aid", "", "I added a simple experiment diagram. Random assignment sends subjects into treatment groups by chance.", "", "**Quick check:** Is the study selecting a sample, assigning treatments, or both?", sep = "\n"),
@@ -773,6 +839,7 @@ render_stat2331_visual <- function(visual_type) {
     confidence_interval_number_line = plot_confidence_interval_number_line(),
     standard_normal_curve = plot_standard_normal_curve(),
     scatterplot_association = plot_scatterplot_association(),
+    time_plot = plot_time_plot(),
     regression_residual_plot = plot_regression_residual_plot(),
     bar_chart_categorical = plot_bar_chart_categorical(),
     histogram_quantitative = plot_histogram_quantitative(),

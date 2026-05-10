@@ -81,6 +81,8 @@ This repo may point to local copyrighted textbook PDFs, extracted text, generate
 
 Do not hard-code API keys. Copy `.Renviron.example` to `.Renviron` locally and fill in keys there if you want live LLM responses. The app falls back to retrieval-based responses when optional services are unavailable.
 
+For shinyapps.io demos, the app can read a deliberately bundled `.Renviron` file at startup so `ANTHROPIC_API_KEY` is available to `ellmer`. Because shinyapps.io does not provide the same encrypted environment-variable workflow as Posit Connect, treat this as a demo-only approach: keep `.Renviron` out of GitHub, include it only in the explicit `rsconnect::deployApp(appFiles = ...)` file list, and rotate the key after a public demo if needed. For production, use Posit Connect, Connect Cloud, or another host with managed secrets.
+
 ## What Is Published vs. Local-Only
 
 The GitHub repository is intended to demonstrate the app architecture, workflow, tutorial, audits, deploy-safe recreated visuals, and a demo question bank. It intentionally does **not** redistribute raw textbook PDFs, extracted copyrighted figures, local API keys, runtime SQLite databases, generated session visuals, local vector indexes, extracted source text, or source-derived topic evidence files.
@@ -126,6 +128,15 @@ Before any public deployment:
 - Define a privacy and logging policy for student questions and tutor responses.
 - Host a permission-cleared processed knowledge base or vector database.
 - Run expanded evaluations with instructors and representative users.
+
+### shinyapps.io Anthropic demo note
+
+The live tutor uses Anthropic through `ellmer` when both conditions are true:
+
+- `ellmer` is installed on the server.
+- `ANTHROPIC_API_KEY` is available in the app process.
+
+For a shinyapps.io proof-of-concept deployment, create a local `.Renviron` file from `.Renviron.example`, set `ANTHROPIC_API_KEY`, and explicitly include `.Renviron` in the `appFiles` vector when deploying. Do not commit `.Renviron` to GitHub. Some fast paths, such as stored hints and deterministic visuals, intentionally skip the LLM for speed; concept explanations and follow-up tutor help use the LLM when it is available.
 
 ## RAG Files
 

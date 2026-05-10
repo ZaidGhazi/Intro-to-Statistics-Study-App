@@ -44,6 +44,7 @@ data/wiki/concept_pages/*.md
 # Runtime/session files
 www/session_visuals/*
 !www/session_visuals/.gitkeep
+rsconnect/
 cache/
 .cache/
 

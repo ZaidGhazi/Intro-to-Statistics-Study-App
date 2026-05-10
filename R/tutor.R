@@ -52,6 +52,29 @@ get_llm_model_config <- function(purpose = c("general", "hint", "practice", "str
   )
 }
 
+llm_provider_status <- function() {
+  ellmer_available <- requireNamespace("ellmer", quietly = TRUE)
+  anthropic_available <- nzchar(Sys.getenv("ANTHROPIC_API_KEY"))
+  openai_available <- nzchar(Sys.getenv("OPENAI_API_KEY"))
+  provider <- dplyr::case_when(
+    ellmer_available && anthropic_available ~ "anthropic",
+    ellmer_available && openai_available ~ "openai",
+    !ellmer_available ~ "ellmer_missing",
+    TRUE ~ "api_key_missing"
+  )
+  list(
+    provider = provider,
+    ellmer_available = ellmer_available,
+    anthropic_available = anthropic_available,
+    openai_available = openai_available,
+    ready = provider %in% c("anthropic", "openai")
+  )
+}
+
+llm_tutor_available <- function() {
+  isTRUE(llm_provider_status()$ready)
+}
+
 evidence_has_primary_support <- function(evidence, mode = "general", professor_id = NULL) {
   if (!is.data.frame(evidence) || nrow(evidence) == 0) {
     return(FALSE)
@@ -1263,7 +1286,9 @@ build_practice_help_prompt <- function(help_mode = c("hint", "concept", "diagnos
     "Before the student submits, never fill in a blank, identify the correct answer choice, or state 'the answer is ...'.",
     "If you are not sure the retrieved evidence supports a claim, say the evidence is not strong enough and ask a clarifying question.",
     "Do not show any developer/debug labels, internal routing language, or module-switch prompts to the student.",
+    "If the student asks what a specific graph or plot looks like, prioritize that request over broader related concepts from the current question.",
     "If relevant visual metadata is provided and it is relevant to the current question, explain what to notice in the displayed visual rather than saying you do not have access to diagrams.",
+    "The app renders visuals separately using recreated ggplot/R graphics or permission-controlled local metadata; do not ask the model to generate an image.",
     mode_instruction,
     if (isTRUE(practice_direct_answer_request(help_question))) {
       "The student asked for only the answer. Redirect to a guided explanation and do not give only the final answer."
@@ -1509,6 +1534,38 @@ generate_contextual_practice_help <- function(help_mode = c("hint", "concept", "
   )
   if (!is.null(anchored_answer)) {
     anchored_text <- clean_tutor_markdown(anchored_answer$answer)
+    llm_status <- llm_provider_status()
+    if (isTRUE(use_llm) &&
+        isTRUE(llm_status$ready) &&
+        help_mode %in% c("concept", "followup")) {
+      prompt <- paste(
+        build_practice_help_prompt(
+          help_mode = help_mode,
+          practice_context = practice_context,
+          evidence_result = evidence_result,
+          visual_metadata = visuals,
+          answer_withheld = answer_withheld,
+          help_question = help_question
+        ),
+        "A local concept anchor is available. Use it to stay on-topic, but write the final answer conversationally in your own concise Markdown.",
+        "Local concept anchor:",
+        anchored_text,
+        sep = "\n\n"
+      )
+      generation_start <- Sys.time()
+      llm_calls_count <- 1L
+      llm_result <- call_grounded_llm(prompt, model_purpose = "practice")
+      generation_time <- elapsed_seconds(generation_start)
+      if (!is.null(llm_result$answer) && nzchar(str_squish(llm_result$answer))) {
+        anchored_text <- clean_tutor_markdown(llm_result$answer)
+      }
+    } else {
+      llm_result <- list(answer = NULL, error = if (isTRUE(use_llm)) llm_status$provider else "LLM disabled.")
+    }
+    if (!isTRUE(answer_submitted) && practice_answer_evaluation_language(anchored_text)) {
+      anchored_text <- clean_tutor_markdown(anchored_answer$answer)
+      llm_result$error <- paste(c(llm_result$error %||% NA_character_, "pre_submit_evaluation_language_removed"), collapse = "; ")
+    }
     leak_check <- redact_practice_answer_leaks(
       answer = anchored_text,
       practice_context = practice_context,
@@ -1541,12 +1598,12 @@ generate_contextual_practice_help <- function(help_mode = c("hint", "concept", "
       answer_withheld = answer_withheld,
       current_question_id = practice_context$current_question_id %||% NA_character_,
       expected_concept_tag = practice_context$expected_concept_tag %||% NA_character_,
-      llm_error = "practice_context_anchor",
+      llm_error = llm_result$error %||% "practice_context_anchor",
       used_cached_evidence = used_cached_evidence,
       llm_calls_count = llm_calls_count,
       retrieval_time = retrieval_time,
       rerank_time = evidence_result$rerank_time %||% NA_real_,
-      generation_time = 0,
+      generation_time = generation_time,
       verifier_time = verifier_time,
       total_time = elapsed_seconds(total_start),
       stored_content_used = isTRUE(anchored_answer$stored_content_used),

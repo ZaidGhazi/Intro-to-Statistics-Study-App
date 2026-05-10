@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+  <title id="title">Time plot</title>
+  <desc id="desc">A recreated time plot with time on the horizontal axis and connected values showing change over time.</desc>
+  <rect width="900" height="560" fill="#ffffff"/>
+  <text x="70" y="58" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#222222">Time plot</text>
+  <text x="70" y="88" font-family="Arial, sans-serif" font-size="17" fill="#555555">Time is on the horizontal axis so trends and unusual changes are visible</text>
+  <line x1="90" y1="450" x2="830" y2="450" stroke="#333333" stroke-width="2"/>
+  <line x1="90" y1="450" x2="90" y2="120" stroke="#333333" stroke-width="2"/>
+  <g font-family="Arial, sans-serif" font-size="14" fill="#555555">
+    <text x="84" y="482">Jan</text>
+    <text x="206" y="482">Mar</text>
+    <text x="328" y="482">May</text>
+    <text x="450" y="482">Jul</text>
+    <text x="572" y="482">Sep</text>
+    <text x="694" y="482">Nov</text>
+    <text x="808" y="482">Dec</text>
+    <text x="48" y="455">40</text>
+    <text x="48" y="372">50</text>
+    <text x="48" y="289">60</text>
+    <text x="48" y="206">70</text>
+  </g>
+  <g stroke="#e7eaf0" stroke-width="1">
+    <line x1="90" y1="367" x2="830" y2="367"/>
+    <line x1="90" y1="284" x2="830" y2="284"/>
+    <line x1="90" y1="201" x2="830" y2="201"/>
+  </g>
+  <polyline points="90,433 151,408 212,384 273,359 334,326 395,284 456,251 517,259 578,292 639,334 700,375 761,400" fill="none" stroke="#4f7cac" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+  <g fill="#d1495b" stroke="#ffffff" stroke-width="2">
+    <circle cx="90" cy="433" r="7"/>
+    <circle cx="151" cy="408" r="7"/>
+    <circle cx="212" cy="384" r="7"/>
+    <circle cx="273" cy="359" r="7"/>
+    <circle cx="334" cy="326" r="7"/>
+    <circle cx="395" cy="284" r="7"/>
+    <circle cx="456" cy="251" r="7"/>
+    <circle cx="517" cy="259" r="7"/>
+    <circle cx="578" cy="292" r="7"/>
+    <circle cx="639" cy="334" r="7"/>
+    <circle cx="700" cy="375" r="7"/>
+    <circle cx="761" cy="400" r="7"/>
+  </g>
+  <text x="425" y="520" font-family="Arial, sans-serif" font-size="18" fill="#333333">Time</text>
+  <text x="18" y="295" font-family="Arial, sans-serif" font-size="18" fill="#333333" transform="rotate(-90 18 295)">Measured value</text>
+</svg>

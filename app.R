@@ -9,6 +9,19 @@ library(stringr)
 library(glue)
 library(htmltools)
 
+# shinyapps.io does not provide a secrets UI like Posit Connect. If a
+# deployment intentionally bundles a local .Renviron file, read it here so
+# Sys.getenv("ANTHROPIC_API_KEY") is available before tutor helpers run.
+load_app_environment <- function(path = ".Renviron") {
+  if (file.exists(path)) {
+    readRenviron(path)
+    message("[config] Loaded app environment from ", path)
+  }
+  invisible(TRUE)
+}
+
+load_app_environment()
+
 source("R/wiki.R")
 source("R/chunk_schema.R")
 source("R/aliases.R")
@@ -6318,18 +6331,68 @@ student_server <- function(id, user_info) {
       )
     }
 
+    is_generic_template_hint <- function(text) {
+      cleaned <- str_to_lower(str_squish(as.character(text %||% "")))
+      !nzchar(cleaned) ||
+        str_detect(cleaned, "focus on the phrase in the question that names the statistical idea") ||
+        str_detect(cleaned, "ask what object is being described") ||
+        str_detect(cleaned, "name what the question is asking for, then match")
+    }
+
+    contextual_hint_for_question <- function(question) {
+      concept <- str_to_lower(as.character(question$concept_tag %||% question$topic_id %||% ""))
+      stem <- str_to_lower(as.character(question$question_text %||% ""))
+      combined <- paste(concept, stem, collapse = " ")
+
+      if (str_detect(combined, "resistant|nonresistant|mean|median|skew|outlier|measure of center")) {
+        return("Focus on the outliers. Which measure of center depends on the middle position instead of using every value?")
+      }
+      if (str_detect(combined, "categorical|quantitative|variable_classification|variable type")) {
+        return("Ask whether the recorded values are category labels or meaningful measurements where arithmetic, like averaging, would make sense.")
+      }
+      if (str_detect(combined, "graph|bar chart|histogram|scatterplot|time plot")) {
+        return("First decide what kind of variable or relationship is being displayed: categories, one quantitative distribution, two quantitative variables, or values over time.")
+      }
+      if (str_detect(combined, "p-value|p value|hypothesis|null|alternative|significance")) {
+        return("Start by identifying the null claim and what result would count as evidence against it.")
+      }
+      if (str_detect(combined, "confidence|margin of error|interval")) {
+        return("Look for the estimate, the margin of error, and whether the question is asking about a plausible range for a population value.")
+      }
+      if (str_detect(combined, "z-score|normal|normal_dist|normal distribution")) {
+        return("Translate the value into a z-score idea: how many standard deviations it is from the mean, then think about the shaded area.")
+      }
+      if (str_detect(combined, "binomial")) {
+        return("Check the binomial setup first: fixed number of trials, two outcomes, same success probability, and independent trials.")
+      }
+      if (str_detect(combined, "sampling distribution|central limit|clt")) {
+        return("Separate the sample statistic from the population value, then think about how the statistic varies from sample to sample.")
+      }
+
+      label <- get_concept_label(question$concept_tag %||% question$topic_id)
+      glue("Focus on the specific idea being tested here: {label}. What clue in the question tells you that this is the right concept?")
+    }
+
     build_hint_ladder <- function(question) {
-      hints <- c(
+      stored_hints <- c(
         question$hint_1 %||% "",
         question$hint_2 %||% "",
         question$hint_3 %||% "",
-        question$hint %||% "",
-        glue("Hint: focus on {get_concept_label(question$concept_tag %||% question$topic_id)} before doing any calculation."),
-        "Hint: name what the question is asking for, then match that to the relevant statistic, parameter, or condition."
+        question$hint %||% ""
       ) %>%
         as.character() %>%
         str_replace_all("[*_`>#]", " ") %>%
+        map_chr(clean_student_facing_source_language) %>%
+        discard(is_generic_template_hint)
+
+      hints <- c(
+        stored_hints,
+        contextual_hint_for_question(question),
+        glue("Focus on {get_concept_label(question$concept_tag %||% question$topic_id)} before doing any calculation.")
+      ) %>%
+        as.character() %>%
         map_chr(clean_student_facing_source_language)
+
       unique(hints[nzchar(hints)])
     }
 
@@ -6898,9 +6961,17 @@ student_server <- function(id, user_info) {
       } else {
         explicit_visual_request
       }
-      deterministic_visual_type <- if (isTRUE(explicit_visual_request)) {
-        choose_visual_type(help_question, q) %||% if (exists("strict_question_visual_type", mode = "function")) strict_question_visual_type(q) else NULL
-      } else if (isTRUE(attach_visual_to_turn) && exists("strict_question_visual_type", mode = "function")) {
+      named_visual_type <- if (isTRUE(explicit_visual_request) && exists("choose_visual_type", mode = "function")) {
+        choose_visual_type(help_question, NULL)
+      } else {
+        NULL
+      }
+      question_has_linked_visual <- exists("has_question_visual_link", mode = "function") &&
+        isTRUE(has_question_visual_link(q))
+      deterministic_visual_type <- if (!is.null(named_visual_type) && nzchar(named_visual_type %||% "")) {
+        named_visual_type
+      } else if (isTRUE(attach_visual_to_turn) && !isTRUE(question_has_linked_visual) &&
+                 exists("strict_question_visual_type", mode = "function")) {
         strict_question_visual_type(q)
       } else {
         NULL
@@ -6919,46 +6990,7 @@ student_server <- function(id, user_info) {
           message = "Preparing help for this question...",
           value = 0.2,
           {
-            if (isTRUE(explicit_visual_request) && !is.null(deterministic_visual_type)) {
-              incProgress(0.75, detail = "Rendering a local visual aid")
-              retrieval_query <- build_question_retrieval_query(q)
-              current_module_id <- normalize_rag_module_id(q$module_id, query = q$question_text) %||%
-                topic_to_rag_module(q$topic_id)
-              list(
-                answer = visual_response_for_type(deterministic_visual_type),
-                help_mode = help_mode,
-                retrieval_query = retrieval_query,
-                evidence_used = tibble(),
-                visuals_used = tibble(),
-                confidence = "medium",
-                needs_clarification = FALSE,
-                hallucination_check = "skipped",
-                hallucination_score = NA_real_,
-                retrieval_trace = tibble(),
-                normalized_query = normalize_student_query(retrieval_query),
-                expanded_queries = expand_query(retrieval_query),
-                active_module_id = current_module_id,
-                current_module_id = current_module_id,
-                active_module_ids = get_selected_modules(practice_state$selected_modules),
-                inferred_module_id = route_question_to_module(retrieval_query, active_module_ids = get_selected_modules(practice_state$selected_modules)),
-                expanded_outside_active = FALSE,
-                expanded_outside_selected = FALSE,
-                answer_submitted = isTRUE(context$answer_submitted),
-                answer_withheld = TRUE,
-                current_question_id = context$current_question_id %||% q$question_id,
-                expected_concept_tag = context$expected_concept_tag %||% q$concept_tag,
-                llm_error = "deterministic_visual",
-                used_cached_evidence = FALSE,
-                llm_calls_count = 0L,
-                retrieval_time = 0,
-                rerank_time = 0,
-                generation_time = 0,
-                verifier_time = 0,
-                total_time = 0,
-                deterministic_visual_type = deterministic_visual_type,
-                deterministic_visual_caption = visual_caption_for_type(deterministic_visual_type)
-              )
-            } else if (identical(help_mode, "hint") && length(build_hint_ladder(q)) > 0) {
+            if (identical(help_mode, "hint") && !isTRUE(explicit_visual_request) && length(build_hint_ladder(q)) > 0) {
               incProgress(0.55, detail = "Showing a stored hint")
               cached <- if (!is.null(practice_state$evidence_cache)) {
                 get_cached_question_evidence(q)
@@ -6997,7 +7029,19 @@ student_server <- function(id, user_info) {
             } else {
               incProgress(0.2, detail = "Using cached evidence for the current question")
               cached <- get_cached_question_evidence(q)
-              incProgress(0.25, detail = "Building a short grounded tutor response")
+              visual_metadata <- cached$visuals
+              if (!is.null(deterministic_visual_type) && nzchar(deterministic_visual_type %||% "") &&
+                  exists("deterministic_visual_prompt_metadata", mode = "function")) {
+                visual_metadata <- bind_rows(
+                  deterministic_visual_prompt_metadata(
+                    visual_type = deterministic_visual_type,
+                    module_id = context$current_module_id %||% context$active_module_id,
+                    concept_tag = context$expected_concept_tag %||% q$concept_tag
+                  ),
+                  visual_metadata %||% tibble()
+                )
+              }
+              incProgress(0.25, detail = "Building a grounded tutor response")
               help <- generate_contextual_practice_help(
                 help_mode = help_mode,
                 practice_context = context,
@@ -7007,9 +7051,9 @@ student_server <- function(id, user_info) {
                 current_module_id = context$current_module_id,
                 mode = context$mode,
                 professor_id = context$professor_id,
-                use_llm = !identical(help_mode, "hint"),
+                use_llm = isTRUE(explicit_visual_request) || !identical(help_mode, "hint"),
                 evidence_result = cached$evidence_result,
-                visual_metadata = cached$visuals,
+                visual_metadata = visual_metadata,
                 run_faithfulness = TRUE
               )
               incProgress(0.3, detail = "Applying answer-safety rules")
@@ -7025,12 +7069,10 @@ student_server <- function(id, user_info) {
         tutor_state$last_help_mode <- result$help_mode %||% help_mode
         assistant_message_id <- new_tutor_message_id("assistant")
         if (isTRUE(explicit_visual_request) && !is.null(deterministic_visual_type)) {
-          result$answer <- visual_response_for_type(deterministic_visual_type)
           result$deterministic_visual_type <- deterministic_visual_type
           result$deterministic_visual_caption <- visual_caption_for_type(deterministic_visual_type)
           practice_state$practice_help <- result
           practice_state$practice_help_debug <- result
-          tutor_state$last_tutor_answer <- result$answer
         } else if (isTRUE(explicit_visual_request)) {
           result$deterministic_visual_type <- NA_character_
           result$deterministic_visual_caption <- NA_character_

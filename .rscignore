@@ -1,0 +1,30 @@
+# Keep shinyapps.io deployment public-safe and lightweight.
+# renv.lock stays in GitHub for reproducibility, but shinyapps.io can infer
+# deployment dependencies from DESCRIPTION/app code.
+renv.lock
+
+# Secrets and local environment files
+# Keep .Renviron ignored by default so app-wide deploys do not accidentally
+# upload secrets. For shinyapps.io, explicitly include ".Renviron" in appFiles
+# only for the deployment where you intentionally want live Anthropic responses.
+.Renviron
+.Renviron.local
+.env
+
+# Local/private/copyrighted source material and derived evidence
+data/raw/
+data/processed/text/
+data/processed/topic_evidence/
+data/processed/retrieval_index.rds
+data/processed/source_manifest.csv
+data/processed/topic_evidence_index.csv
+data/wiki/concept_pages/
+
+# Runtime/session artifacts
+www/session_visuals/
+rsconnect/
+tutorial/
+docs/
+.git/
+.github/
+.Rproj.user/

@@ -16,6 +16,7 @@ Imports:
     DBI,
     digest,
     dplyr,
+    ellmer,
     fs,
     ggplot2,
     glue,
@@ -32,7 +33,6 @@ Imports:
     tidyr
 Suggests:
     DT,
-    ellmer,
     officer,
     pdftools,
     ragnar,
