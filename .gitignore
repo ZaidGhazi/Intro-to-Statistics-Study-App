@@ -47,6 +47,9 @@ www/session_visuals/*
 cache/
 .cache/
 
+# Local tutorial source. Keep rendered HTML public.
+tutorial/*.qmd
+
 # R / RStudio
 .Rhistory
 .RData

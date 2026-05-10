@@ -64,7 +64,7 @@ The public repo includes files such as:
 - setup, smoke-test, audit, edge-case, and vitals evaluation scripts
 - a generated demo question bank and audit summaries
 - safe recreated visual assets under `www/visuals/recreated/`
-- the Quarto tutorial and screenshots
+- the rendered HTML tutorial and screenshots
 
 Local-only files are ignored by `.gitignore`, including:
 
@@ -113,10 +113,10 @@ Before any public deployment:
 ## STAT 6395 Final Project Materials
 
 - `docs/stat6395_alignment_checklist.md`: rubric and course-topic alignment checklist.
-- `tutorial/intro_stats_study_app_tutorial.qmd`: Quarto tutorial draft explaining the NLP/LLM/RAG workflow.
+- `tutorial/intro_stats_study_app_tutorial.html`: rendered tutorial explaining the NLP/LLM/RAG workflow.
 - `intro_stats_study_app_presentation_cleaned_v2.pptx`: final project presentation deck.
 
-The final tutorial can be published online without raw copyrighted course content. The app itself should only be deployed with permission-cleared or recreated materials.
+The rendered tutorial can be published online without raw copyrighted course content. The app itself should only be deployed with permission-cleared or recreated materials.
 
 ## Run Locally
 
