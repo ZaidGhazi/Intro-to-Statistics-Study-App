@@ -114,6 +114,7 @@ Before any public deployment:
 
 - `docs/stat6395_alignment_checklist.md`: rubric and course-topic alignment checklist.
 - `tutorial/intro_stats_study_app_tutorial.qmd`: Quarto tutorial draft explaining the NLP/LLM/RAG workflow.
+- `intro_stats_study_app_presentation_cleaned_v2.pptx`: final project presentation deck.
 
 The final tutorial can be published online without raw copyrighted course content. The app itself should only be deployed with permission-cleared or recreated materials.
 
