@@ -8,14 +8,14 @@ This document checks the introductory statistics study app against the final-pro
 |---|---|---|---|
 | Problem statement | Present | README describes a module-based introductory statistics practice and grounded tutor app. | Make the tutorial open with the student pain point: students need help inside course modules while working practice questions. |
 | LLM/API tools | Present | `R/tutor.R`, `app.R`, and generation scripts use `ellmer` with environment-variable API keys. | In the tutorial, name the provider options and explain fallback behavior when keys are missing. |
-| Corpus/knowledge base | Present | `data/raw/`, `data/processed/`, `data/wiki/`, `R/ingest_textbook.R`, `R/overlays.R`. | Do not publish copyrighted raw text. Describe the corpus structure and local-only restriction. |
-| Technical rigor | Strong but needs narrative | Hybrid retrieval, module policy, source policy, grounded prompts, practice tutor, vitals evals. | Explain the workflow as a controlled RAG chain, not a generic chatbot. |
-| Robust product behavior | Partial | Smoke tests, setup checks, retrieval fallback, no-key fallback, app pre-flight fixes. | Run smoke tests and include screenshots or a short demo video. |
-| Reproducibility | Partial | `.Renviron.example`, `R/check_setup.R`, `R/smoke_test.R`, modular R files. | Add package installation instructions and render the Quarto tutorial. |
-| Creativity/ambition | Strong | Professor overlays, module-first retrieval, conversational practice-integrated tutor, weak concept tracking, image metadata hooks. | Present these as ambition features, with clear notes on what is complete vs scaffolded. |
-| Tutorial | Planned next | the planned Quarto tutorial file. | Fill in screenshots, sample eval output, and any demo links. |
-| Deployment/publishing | In tension with local-only design | README says local proof of concept; rubric asks for online access. | Publish the tutorial/repo online, but deploy the app only with non-copyrighted or permission-cleared materials. For class, a recorded local demo may be safest. |
-| Presentation | Not present in repo | None. | Use the architecture and checklist tables as slide material. |
+| Corpus/knowledge base | Present with public-safe scaffold | Public repo includes `data/processed/public_demo_chunks.csv`, the demo question bank, and ingestion/retrieval code; private textbook-derived assets are ignored. | For any public deployment, rebuild the corpus from licensed, open, or instructor-created materials. |
+| Technical rigor | Strong | Hybrid retrieval, module policy, source policy, grounded prompts, practice tutor, vitals evals, visual helpers, and CI smoke checks. | In the presentation, explain this as a controlled RAG chain, not a generic chatbot. |
+| Robust product behavior | Present | Smoke tests, setup checks, retrieval fallback, no-key fallback, public demo corpus, and cold-start practice flow. | Run the live demo from a clean session before presenting. |
+| Reproducibility | Present for portfolio use | `DESCRIPTION`, `renv.lock`, `.Renviron.example`, GitHub Actions, setup checks, smoke tests, and public-safe demo chunks. | Reviewers can reproduce the app shell and demo RAG behavior; full textbook-backed RAG requires permission-cleared local sources. |
+| Creativity/ambition | Strong | Professor overlays, module-first retrieval, practice-integrated tutor, weak concept tracking, visual metadata hooks, and deterministic visual explanations. | Clearly distinguish complete demo features from production extensions. |
+| Tutorial | Present | Rendered HTML tutorial, screenshots, and final presentation deck are included. | Keep the source `.qmd` local-only unless intentionally publishing tutorial source later. |
+| Deployment/publishing | Appropriately scoped | README frames the project as a portfolio/local proof of concept and documents local-only copyrighted materials. | Public deployment would require content permissions, secure API keys, privacy/logging policy, and hosted infrastructure. |
+| Presentation | Present | `intro_stats_study_app_presentation_cleaned_v2.pptx`. | Use the deck with the live app demo. |
 
 Note: the rubric PDF says "Project Rigor (20 points total)" but its point summary lists "Project Rigor 25." Confirm the grading total with the instructor if needed.
 
@@ -58,17 +58,14 @@ Note: the rubric PDF says "Project Rigor (20 points total)" but its point summar
 | Prompt engineering for tutor behavior | Present. |
 | Vitals-style evaluation | Present. |
 | Module-based student workflow | Present. |
-| Reproducible tutorial/setup | To be written/rendered after the final app freeze; needs screenshots and rendered output. |
+| Reproducible tutorial/setup | Present via rendered HTML tutorial, README quick start, `DESCRIPTION`, `renv.lock`, setup check, smoke test, and CI workflow. |
 
 ## Main Gaps to Close
 
-1. Render and polish the Quarto tutorial.
-2. Add screenshots or a short demo video showing the app workflow.
-3. Run `run_edge_case_tests(dry_run = TRUE)` and `run_vitals_eval(dry_run = TRUE)`, then paste small summary tables into the tutorial.
-4. Decide how to satisfy the online-access expectation without publishing copyrighted textbook material.
-5. Clearly label dense retrieval as TF-IDF/LSA unless API embeddings are added.
-6. Treat image support as scaffolded unless actual metadata and visuals are available.
-7. Add a final presentation architecture diagram using the controlled RAG chain.
+1. Run a final live demo check before presenting.
+2. Optionally add a short demo video or GIF to the repo if the class/project submission benefits from it.
+3. If sharing beyond class, make clear that the included public demo corpus is synthetic and small; the full textbook-backed evidence layer must be rebuilt from permission-cleared sources.
+4. If deploying publicly later, add authentication, privacy/logging policy, hosted storage, and instructor review.
 
 ## Suggested Project Framing
 

@@ -63,3 +63,4 @@ Thumbs.db
 # Runtime SQLite databases created by the app
 /*.sqlite
 /*.db
+.positai
