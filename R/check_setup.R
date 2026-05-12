@@ -110,11 +110,25 @@ scan_for_potential_secrets <- function(paths = c("app.R", "R", ".Renviron.exampl
     "Bearer\\s+[A-Za-z0-9._-]{20,}",
     "(ANTHROPIC_API_KEY|OPENAI_API_KEY)\\s*=\\s*['\"][^'\"]{8,}['\"]"
   )
+  placeholder_patterns <- c(
+    "your-key-here",
+    "your[_-]?[a-z0-9_-]*key",
+    "api[_-]?key[_-]?here",
+    "placeholder",
+    "example[_-]?key",
+    "YOUR_[A-Z0-9_]+"
+  )
   hits <- character()
   for (file in files) {
     lines <- readLines(file, warn = FALSE)
     for (pattern in patterns) {
       idx <- grep(pattern, lines, perl = TRUE)
+      if (length(idx) > 0) {
+        placeholder_idx <- vapply(lines[idx], function(line) {
+          any(grepl(paste(placeholder_patterns, collapse = "|"), line, ignore.case = TRUE, perl = TRUE))
+        }, logical(1))
+        idx <- idx[!placeholder_idx]
+      }
       if (length(idx) > 0) {
         hits <- c(hits, paste0(file, ":", idx))
       }
