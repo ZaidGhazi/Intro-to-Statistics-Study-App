@@ -1,74 +1,96 @@
 # STAT 6395 Final Project Alignment Checklist
 
-This document checks the introductory statistics study app against the final-project rubric and the LLM/NLP topics covered in STAT 6395. The project does not need to use every course topic, but it should clearly show that the app is a thoughtful LLM/NLP system, not only a Shiny interface wrapped around a chatbot.
+This document summarizes how **IntroStats Coach** aligns with the STAT 6395 final-project goals and the LLM/NLP techniques covered in the course. The project is not just a Shiny UI wrapped around a chatbot; it is a controlled educational LLM workflow with a stored question bank, retrieval grounding, tutor guardrails, visual support, and evaluation checks.
 
-## Rubric Readiness
+## Rubric readiness
 
-| Rubric area | Current status | Evidence in repo | What to do before submission |
+| Rubric area | Status | Evidence in repo | Notes before submission |
 |---|---|---|---|
-| Problem statement | Present | README describes a module-based introductory statistics practice and grounded tutor app. | Make the tutorial open with the student pain point: students need help inside course modules while working practice questions. |
-| LLM/API tools | Present | `R/tutor.R`, `app.R`, and generation scripts use `ellmer` with environment-variable API keys. | In the tutorial, name the provider options and explain fallback behavior when keys are missing. |
-| Corpus/knowledge base | Present with public-safe scaffold | Public repo includes `data/processed/public_demo_chunks.csv`, the demo question bank, and ingestion/retrieval code; private textbook-derived assets are ignored. | For any public deployment, rebuild the corpus from licensed, open, or instructor-created materials. |
-| Technical rigor | Strong | Hybrid retrieval, module policy, source policy, grounded prompts, practice tutor, vitals evals, visual helpers, and CI smoke checks. | In the presentation, explain this as a controlled RAG chain, not a generic chatbot. |
-| Robust product behavior | Present | Smoke tests, setup checks, retrieval fallback, no-key fallback, public demo corpus, and cold-start practice flow. | Run the live demo from a clean session before presenting. |
-| Reproducibility | Present for portfolio use | `DESCRIPTION`, `renv.lock`, `.Renviron.example`, GitHub Actions, setup checks, smoke tests, and public-safe demo chunks. | Reviewers can reproduce the app shell and demo RAG behavior; full textbook-backed RAG requires permission-cleared local sources. |
-| Creativity/ambition | Strong | Professor overlays, module-first retrieval, practice-integrated tutor, weak concept tracking, visual metadata hooks, and deterministic visual explanations. | Clearly distinguish complete demo features from production extensions. |
-| Tutorial | Present | Rendered HTML tutorial, screenshots, and final presentation deck are included. | Keep the source `.qmd` local-only unless intentionally publishing tutorial source later. |
-| Deployment/publishing | Appropriately scoped | README frames the project as a portfolio/local proof of concept and documents local-only copyrighted materials. | Public deployment would require content permissions, secure API keys, privacy/logging policy, and hosted infrastructure. |
-| Presentation | Present | `intro_stats_study_app_presentation_cleaned_v2.pptx`. | Use the deck with the live app demo. |
+| Problem statement | Present | README and tutorial frame the app around intro-statistics practice with embedded help. | Emphasize the student pain point: students need help while working practice questions, not after leaving the app. |
+| LLM/API tools | Present | `R/tutor.R`, `app.R`, and related helper scripts use `ellmer` with environment-variable API keys. | Explain that LLM behavior is best with an API key, with local fallbacks when keys are unavailable. |
+| Corpus / knowledge base | Present with public-safe scaffold | The repo includes a demo question bank, retrieval code, and a small public-safe demo corpus. | Full textbook-backed RAG must be rebuilt from licensed, open, or instructor-created sources. |
+| Question bank | Present | `data/processed/question_bank.csv` and audit outputs. | Generated with LLM assistance, then audited for answer choices, feedback, metadata, visuals, and artifact text. |
+| RAG | Central to tutor layer | `R/retrieval.R`, `R/tutor.R`, alias normalization, retrieval/reranking logic. | Present honestly: RAG helped grounding, but also added routing/latency complexity. |
+| Tutor guardrails | Present | `R/tutor.R`, smoke tests, vitals-style checks. | Guardrails target answer leakage, unsupported claims, out-of-scope prompts, and ambiguous prompts. |
+| Technical rigor | Strong | Hybrid retrieval, module policy, source policy, prompt construction, visual helpers, audits, smoke tests, vitals-style checks. | Explain the system as a chain: context -> retrieval -> LLM -> guardrails -> response. |
+| Visual support | Present | `R/visual_helpers.R`, `R/images.R`, recreated visual metadata. | Visuals are trusted R/ggplot-style templates; the app does not execute arbitrary LLM-generated R code. |
+| Reproducibility | Present | `DESCRIPTION`, `renv.lock`, `.Renviron.example`, setup checks, smoke tests, GitHub Actions. | A reviewer can run the app shell and demo retrieval; private source assets remain local-only. |
+| Tutorial | Present | `tutorial/intro_stats_study_app_tutorial.qmd` and rendered screenshots. | Update screenshots/text if the app name or UI changes. |
+| Presentation | Present | `intro_stats_coach_final_presentation.pptx` or latest final deck. | Use live demo link plus backup screenshots. |
+| Deployment | Appropriately scoped | README describes live demo and local-only source policy. | Public production use would need content permissions, secure secrets, privacy/logging, and hosted infrastructure. |
 
-Note: the rubric PDF says "Project Rigor (20 points total)" but its point summary lists "Project Rigor 25." Confirm the grading total with the instructor if needed.
+## Course topic coverage
 
-## Course Topic Coverage
-
-| Course topic area | Status | How this project uses it |
+| Course topic area | Status | How the project uses it |
 |---|---|---|
-| Tidy text representation | Present | Chunks are represented as tibbles with explicit metadata fields. |
-| Tokenization | Present | `tokenize_rag_text()` tokenizes normalized text for keyword scoring, faithfulness checks, and visual scoring. |
-| Stop word handling | Present | `rag_stopwords` removes low-value tokens before retrieval scoring. |
-| N-grams | Partial | The current retrieval uses token and phrase matching, not formal n-gram features. Mention this as a future extension for better phrase retrieval. |
-| Word/document frequency | Partial | Keyword scoring counts token and distinct-token hits. It does not yet expose corpus-level document frequency diagnostics. |
-| TF-IDF | Present | Dense fallback uses `text2vec` TF-IDF plus LSA when the vector index is available. |
-| BM25 | Partial | The app uses a BM25-like keyword fallback, not a formal BM25 package. This is acceptable for a proof of concept if documented honestly. |
-| Topic modeling/LDA | Not used directly | Concept tags and modules act as a controlled topic layer. Explain why controlled course taxonomy is more appropriate than unsupervised LDA for a syllabus-aligned tutor. |
-| Sentiment analysis | Not relevant | Student help quality does not depend on sentiment. Reasonable to omit. |
-| Text feature engineering | Present | Domain aliases, spelling fixes, module IDs, concept tags, source types, and source scopes are explicit features. |
-| Spelling and notation variation | Present | `R/aliases.R` normalizes variants such as `p^`, `p-hat`, `phat`, `xbar`, and `hyo test`. |
-| Semantic similarity | Present/partial | `dense_retrieve()` supports TF-IDF/LSA dense vectors through `text2vec` when an index exists. Stronger API embeddings can be future work. |
-| Text classification | Present as routing logic | `route_question_to_module()` treats module routing as a lightweight domain classifier. Intent classification supports direct-answer safety and visual requests. |
-| Deep learning for text | Discussed, not trained | The project appropriately uses pretrained LLMs instead of training a neural model from scratch. |
-| Transformer/LLM foundations | Present in design | Context windows and retrieved chunks control what the LLM sees; generation is evidence-constrained. |
-| Prompt engineering | Present | `build_grounded_prompt()` and `build_practice_help_prompt()` separate general help, practice hints, concept explanation, diagnosis, and refusal/clarification behavior. |
-| Tool/chain design | Present | The app uses a controlled chain: normalize -> retrieve -> rerank -> generate -> verify -> log. This is safer than an autonomous agent for tutoring. |
-| RAG | Central | Ingestion, metadata, hybrid retrieval, reranking, module/source policy, parent context, grounded generation, and evidence trace are implemented. |
-| Vitals evaluation | Present | `R/evals_vitals.R` builds task-specific vitals cases for retrieval, grounding, refusal, module routing, notation, practice help, and visuals. |
-| Multimodal/images | Implemented scaffold + demo visuals | `R/images.R` supports visual metadata, local-only/deployment-safe filtering, visual retrieval, and tutor visual explanations. Recreated SVG visuals provide deployment-safe examples; full textbook figure extraction and multimodal image-input explanations remain future work. |
-| Fine-tuning | Intentionally omitted | RAG is better because answers must stay grounded in changing course documents. Fine-tuning can be future work. |
+| Tidy text representation | Present | Chunks and question-bank rows are structured as tabular metadata. |
+| Tokenization | Present | Retrieval and scoring tokenize normalized text. |
+| Stop words | Present | Retrieval helpers remove low-value terms. |
+| N-grams / phrase handling | Partial | Phrase and alias matching are used; formal n-gram feature engineering could be future work. |
+| Word/document frequency | Partial | Keyword scoring uses token overlap; full corpus-level diagnostics are not central to the app. |
+| TF-IDF / dense retrieval | Present/partial | `text2vec` TF-IDF/LSA-style retrieval is supported when indexes are available; fallback retrieval remains public-safe. |
+| BM25-like retrieval | Partial | The app uses keyword-style scoring and reranking rather than a standalone BM25 package. |
+| Topic modeling | Not used directly | A controlled course taxonomy is more appropriate than unsupervised LDA for syllabus-aligned tutoring. |
+| Text feature engineering | Present | Module IDs, concept tags, source type, source scope, aliases, and notation variants are explicit features. |
+| Spelling/notation normalization | Present | Aliases normalize variants like `p-hat`, `p_hat`, `phat`, `xbar`, and common misspellings. |
+| Text classification / routing | Present | Module routing and tutor intent detection act as lightweight classification tasks. |
+| Transformer/LLM foundations | Present | The LLM uses a controlled context window: current question, answer choices, evidence, and guardrails. |
+| Prompt engineering | Present | Tutor prompts separate hint, concept explanation, typed follow-up, visual request, and refusal behavior. |
+| Tool/chain design | Present | The app uses a controlled chain rather than an autonomous agent. |
+| RAG | Central | Retrieval provides course-aligned evidence for tutor responses. |
+| Vitals-style evaluation | Present | `R/evals_vitals.R` checks retrieval, tutor behavior, refusal behavior, ambiguity, notation, and visuals. |
+| Multimodal/images | Present as scaffold | Visual metadata and deterministic ggplot-style visuals support question/tutor explanations. |
+| Fine-tuning | Intentionally omitted | RAG is preferred because course materials and notation may change; fine-tuning is future work at most. |
 
-## Minimum Alignment Check
+## Tutor system summary
+
+The current tutor system works as follows:
+
+```text
+Student asks for help
+  -> collect current question + answer choices + module/concept metadata
+  -> detect intent: hint, concept explanation, typed follow-up, or visual request
+  -> retrieve/rerank evidence when useful
+  -> ask LLM for a contextual response when API key is available
+  -> apply guardrails against answer leakage and unsupported claims
+  -> show the student a grounded hint, explanation, follow-up, or visual explanation
+```
+
+RAG helped by adding a course-aligned evidence layer. It also made the tutor more complicated because retrieval has to respect module selection, current question context, notation aliases, and answer-safety rules. This tradeoff should be discussed in the presentation.
+
+## Evaluation summary
+
+| Evaluation layer | What it checks | Why it matters |
+|---|---|---|
+| Question-bank audit | Generated content quality: duplicates, bad options, missing keys, weak explanations, visual relevance, artifact text. | Prevents low-quality generated questions from reaching students. |
+| Smoke test | Core app mechanics: setup, parsing, retrieval, tutor fallback, answer-safety, visual routing, message-scoped visuals. | Verifies the app still works after code changes. |
+| Vitals-style checks | Tutor behavior on tricky prompts: ambiguity, out-of-scope requests, direct-answer requests, notation, wrong-module retrieval, grounding. | Evaluates whether the tutor behaves like a safe educational assistant. |
+
+## Minimum alignment check
 
 | Requirement | Status |
 |---|---|
-| LLM API/tool use in R | Present via `ellmer`; fallback behavior exists when keys are missing. |
-| RAG over course documents | Present. |
-| Dense or semantic retrieval | Present when `text2vec` index is available; otherwise graceful fallback. |
-| Keyword or hybrid retrieval | Present. |
+| LLM API/tool use in R | Present via `ellmer`; fallback behavior exists when keys are unavailable. |
+| RAG over course-aligned content | Present. |
+| Keyword / hybrid retrieval | Present. |
+| Dense retrieval scaffold | Present when indexes are built. |
 | Reranking/source-priority logic | Present. |
-| Grounded generation/hallucination controls | Present. |
-| Prompt engineering for tutor behavior | Present. |
-| Vitals-style evaluation | Present. |
+| Grounded generation / hallucination controls | Present. |
+| Answer-leakage guardrails | Present. |
 | Module-based student workflow | Present. |
-| Reproducible tutorial/setup | Present via rendered HTML tutorial, README quick start, `DESCRIPTION`, `renv.lock`, setup check, smoke test, and CI workflow. |
+| Question-bank audit | Present. |
+| Smoke testing | Present. |
+| Vitals-style evaluation | Present. |
+| Reproducible setup/tutorial | Present. |
 
-## Main Gaps to Close
+## Main gaps and future work
 
-1. Run a final live demo check before presenting.
-2. Optionally add a short demo video or GIF to the repo if the class/project submission benefits from it.
-3. If sharing beyond class, make clear that the included public demo corpus is synthetic and small; the full textbook-backed evidence layer must be rebuilt from permission-cleared sources.
-4. If deploying publicly later, add authentication, privacy/logging policy, hosted storage, and instructor review.
+1. Run the final live demo link from a clean session before presenting.
+2. Keep backup screenshots in the deck in case the hosted app is slow.
+3. Make clear that the included public demo corpus is only a scaffold; full textbook-backed RAG requires permission-cleared sources.
+4. For real deployment, add authentication, privacy/logging, secure API-key handling, and instructor review tools.
+5. Expand human review of generated questions before classroom use.
 
-## Suggested Project Framing
+## Suggested framing sentence
 
-Use this one-sentence framing in the tutorial and presentation:
-
-> This project builds a module-based introductory statistics practice app where LLM help is constrained by a textbook-centered RAG pipeline, domain-specific notation normalization, source-aware reranking, and vitals-style evaluation so students receive grounded hints while working actual course-style practice questions.
+> IntroStats Coach is a module-based introductory-statistics practice app where an audited question bank drives fast practice, while an LLM tutor uses current question context, RAG evidence, answer-safety guardrails, and trusted visual templates to provide grounded help.
