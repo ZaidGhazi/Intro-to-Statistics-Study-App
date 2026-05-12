@@ -52,29 +52,6 @@ get_llm_model_config <- function(purpose = c("general", "hint", "practice", "str
   )
 }
 
-llm_provider_status <- function() {
-  ellmer_available <- requireNamespace("ellmer", quietly = TRUE)
-  anthropic_available <- nzchar(Sys.getenv("ANTHROPIC_API_KEY"))
-  openai_available <- nzchar(Sys.getenv("OPENAI_API_KEY"))
-  provider <- dplyr::case_when(
-    ellmer_available && anthropic_available ~ "anthropic",
-    ellmer_available && openai_available ~ "openai",
-    !ellmer_available ~ "ellmer_missing",
-    TRUE ~ "api_key_missing"
-  )
-  list(
-    provider = provider,
-    ellmer_available = ellmer_available,
-    anthropic_available = anthropic_available,
-    openai_available = openai_available,
-    ready = provider %in% c("anthropic", "openai")
-  )
-}
-
-llm_tutor_available <- function() {
-  isTRUE(llm_provider_status()$ready)
-}
-
 evidence_has_primary_support <- function(evidence, mode = "general", professor_id = NULL) {
   if (!is.data.frame(evidence) || nrow(evidence) == 0) {
     return(FALSE)
@@ -479,6 +456,7 @@ build_practice_retrieval_query <- function(help_mode = c("hint", "concept", "dia
     glue("Student help mode: {help_mode}"),
     glue("Answer submitted: {answer_submitted}"),
     if (nzchar(practice_context$question_text %||% "")) glue("Practice question: {practice_context$question_text}") else NULL,
+    if (nzchar(practice_choices_to_text(practice_context$answer_choices %||% ""))) glue("Answer choices: {practice_choices_to_text(practice_context$answer_choices %||% '')}") else NULL,
     if (nzchar(practice_context$expected_concept_tag %||% "")) glue("Expected concept: {practice_context$expected_concept_tag}") else NULL,
     if (nzchar(practice_context$topic_id %||% "")) glue("Topic: {practice_context$topic_id}") else NULL,
     if (nzchar(practice_context$current_module_id %||% practice_context$active_module_id %||% "")) glue("Current module: {practice_context$current_module_id %||% practice_context$active_module_id}") else NULL,
@@ -634,14 +612,34 @@ format_tutor_concept_label <- function(concept_tag = NULL) {
 }
 
 student_safe_concept_summary <- function(practice_context = list(), concept_label = "this idea") {
+  question_text <- practice_context$question_text %||% ""
+  choices_text <- practice_choices_to_text(practice_context$answer_choices %||% "")
   combined <- str_to_lower(paste(
     concept_label,
-    practice_context$question_text %||% "",
+    question_text,
+    choices_text,
     practice_context$expected_concept_tag %||% "",
     practice_context$weak_concept_tag %||% "",
+    practice_context$concept_explanation %||% "",
+    practice_context$solution_explanation %||% "",
     collapse = " "
   ))
 
+  if (str_detect(combined, "voluntary response|call in|call-in|self selected|self-selected|sampling bias|biased sample|nonresponse|undercoverage|sampling method")) {
+    return("This item is about whether the sample represents the population. A call-in or self-selected sample can be biased because people with strong opinions are more likely to respond, so the sample may not reflect all listeners or all people in the population.")
+  }
+  if (str_detect(combined, "lurking|confound|third variable|hidden variable|association.*caus|correlation.*caus|causation")) {
+    return("A lurking variable is a hidden third variable that can help explain an observed relationship. The key move is to ask whether the two variables are directly connected, or whether another factor could be affecting both.")
+  }
+  if (str_detect(combined, "middle 50|iqr|interquartile|quartile|q1|q3|five[- ]?number")) {
+    return("The middle 50% of the data lies between the first quartile, Q1, and the third quartile, Q3. The spread of that middle half is measured by Q3 minus Q1.")
+  }
+  if (str_detect(combined, "density curve|area under|under.*curve|normal curve|shaded area|probability.*curve")) {
+    return("For a density curve, probability is represented by area under the curve. A proportion between two values corresponds to the area over that interval.")
+  }
+  if (str_detect(combined, "residual|observed.*predicted|predicted.*observed")) {
+    return("A residual is the difference between an observed response and the value predicted by a regression line or model. It is usually described as observed minus predicted.")
+  }
   if (str_detect(combined, "resistant|nonresistant|non resistant|sensitive|mean|median|measure of center|skew|outlier|income|extreme value")) {
     return("A measure is resistant if extreme values do not change it very much. The median depends on the middle position, while the mean uses every value and can be pulled toward a long tail or outliers.")
   }
@@ -650,6 +648,9 @@ student_safe_concept_summary <- function(practice_context = list(), concept_labe
   }
   if (str_detect(combined, "graph|bar|histogram|boxplot|scatterplot")) {
     return("Match the graph to the variable type. Categories usually call for separated bars, while quantitative values are shown with distribution displays like histograms or boxplots.")
+  }
+  if (str_detect(combined, "scatterplot|correlation|association|regression|slope|explanatory|response")) {
+    return("For two quantitative variables, focus on the direction, form, and strength of the relationship. A pattern can support prediction, but it does not by itself prove cause and effect.")
   }
   if (str_detect(combined, "p_hat|p hat|sample proportion|p_0|hypothesized proportion")) {
     return("Keep sample information separate from the null claim. The sample proportion is computed from the data, while the hypothesized proportion belongs to the null model.")
@@ -660,8 +661,14 @@ student_safe_concept_summary <- function(practice_context = list(), concept_labe
   if (str_detect(combined, "confidence|margin of error|interval")) {
     return("A confidence interval uses sample information to estimate a population parameter. The margin of error describes how far the estimate extends on each side.")
   }
+  if (str_detect(combined, "z[- ]?score|standard normal|standardize")) {
+    return("A z-score measures location in standard-deviation units. It tells how far a value is from the mean and in which direction.")
+  }
+  if (str_detect(combined, "binomial|success|trial|independent")) {
+    return("A binomial setting has a fixed number of trials, two outcomes on each trial, the same probability of success each time, and independent trials.")
+  }
 
-  "Use the course evidence to name the concept first, then match the statistic, graph, condition, or notation to what the question is asking."
+  "Use the exact wording of the current question and the answer choices to identify the statistical idea being tested, then connect that idea back to the setup."
 }
 
 format_hint_response <- function(concept_label = "this idea",
@@ -1232,7 +1239,9 @@ build_practice_help_prompt <- function(help_mode = c("hint", "concept", "diagnos
   } else {
     practice_value_to_text(practice_context$correct_answer %||% "")
   }
-  visual_text <- if (is.data.frame(visual_metadata) && nrow(visual_metadata) > 0) {
+  visual_text <- if (nzchar(practice_context$requested_visual_caption %||% "")) {
+    glue("Requested visual template: {practice_context$requested_visual_type %||% 'visual'} — {practice_context$requested_visual_caption}")
+  } else if (is.data.frame(visual_metadata) && nrow(visual_metadata) > 0) {
     paste(head(visual_metadata$caption %||% visual_metadata$vision_description %||% "", 3), collapse = " | ")
   } else {
     "No visual metadata selected."
@@ -1265,17 +1274,19 @@ build_practice_help_prompt <- function(help_mode = c("hint", "concept", "diagnos
     ),
     followup = paste(
       "Help mode: follow-up.",
-      "Continue the recent tutor conversation using the current practice question, previous tutor answer, and retrieved evidence.",
+      "Answer the student's exact typed question first, then connect it back to the current practice question.",
+      "Use the current question text and answer choices as context. If the student asks about an answer choice or a term inside an answer choice, define or explain that term without saying whether it is correct.",
       "Do not assume the student attempted the question unless Answer submitted is TRUE.",
       "If the follow-up is vague but practice context exists, connect it to that context.",
-      "If the follow-up asks for a visual and no visual metadata is available, say so briefly and explain in words."
+      "If the follow-up asks for a visual, explain what the displayed visual helps the student notice in this specific question. Do not provide generic graph advice; tie the explanation to the current question and answer choices."
     )
   )
 
   paste(
     "You are the embedded introductory statistics practice tutor.",
-    "Use only the retrieved evidence and the practice context below.",
-    "The current practice question context is the priority. If the student asks about a term in the current question, help with that term instead of asking to switch modules.",
+    "Use the retrieved evidence and the current practice context below. The current question text and answer choices are valid context for tutoring.",
+    "The current practice question context is the priority. If retrieved evidence is broad or conflicting, prefer the current question wording and answer choices.",
+    "If the student asks about a term in the current question or answer choices, explain that term directly and then connect it back to the current question without saying whether it is the correct answer.",
     "Do not expose source file names, professor names, private notes, or copyrighted excerpts beyond short grounded paraphrases.",
     "Format the response in clean Markdown.",
     "Use short paragraphs. Use bullets only when they help. Use bold for key terms.",
@@ -1286,9 +1297,7 @@ build_practice_help_prompt <- function(help_mode = c("hint", "concept", "diagnos
     "Before the student submits, never fill in a blank, identify the correct answer choice, or state 'the answer is ...'.",
     "If you are not sure the retrieved evidence supports a claim, say the evidence is not strong enough and ask a clarifying question.",
     "Do not show any developer/debug labels, internal routing language, or module-switch prompts to the student.",
-    "If the student asks what a specific graph or plot looks like, prioritize that request over broader related concepts from the current question.",
-    "If relevant visual metadata is provided and it is relevant to the current question, explain what to notice in the displayed visual rather than saying you do not have access to diagrams.",
-    "The app renders visuals separately using recreated ggplot/R graphics or permission-controlled local metadata; do not ask the model to generate an image.",
+    "If relevant visual metadata or a requested visual template is provided, explain what the displayed visual helps the student notice in this specific question rather than saying you do not have access to diagrams.",
     mode_instruction,
     if (isTRUE(practice_direct_answer_request(help_question))) {
       "The student asked for only the answer. Redirect to a guided explanation and do not give only the final answer."
@@ -1311,7 +1320,7 @@ build_practice_help_prompt <- function(help_mode = c("hint", "concept", "diagnos
     glue("Relevant visual metadata: {visual_text}"),
     "Retrieved evidence:",
     evidence_packet,
-    "Return concise student-facing Markdown. Prefer a guiding question for hints. If the evidence is weak, say so and ask for clarification.",
+    "Return concise student-facing Markdown. Prefer a guiding question for hints. If the evidence is weak but the current question context is clear, still give a contextual explanation from the question and answer choices rather than a generic setup reminder.",
     sep = "\n\n"
   )
 }
@@ -1534,38 +1543,6 @@ generate_contextual_practice_help <- function(help_mode = c("hint", "concept", "
   )
   if (!is.null(anchored_answer)) {
     anchored_text <- clean_tutor_markdown(anchored_answer$answer)
-    llm_status <- llm_provider_status()
-    if (isTRUE(use_llm) &&
-        isTRUE(llm_status$ready) &&
-        help_mode %in% c("concept", "followup")) {
-      prompt <- paste(
-        build_practice_help_prompt(
-          help_mode = help_mode,
-          practice_context = practice_context,
-          evidence_result = evidence_result,
-          visual_metadata = visuals,
-          answer_withheld = answer_withheld,
-          help_question = help_question
-        ),
-        "A local concept anchor is available. Use it to stay on-topic, but write the final answer conversationally in your own concise Markdown.",
-        "Local concept anchor:",
-        anchored_text,
-        sep = "\n\n"
-      )
-      generation_start <- Sys.time()
-      llm_calls_count <- 1L
-      llm_result <- call_grounded_llm(prompt, model_purpose = "practice")
-      generation_time <- elapsed_seconds(generation_start)
-      if (!is.null(llm_result$answer) && nzchar(str_squish(llm_result$answer))) {
-        anchored_text <- clean_tutor_markdown(llm_result$answer)
-      }
-    } else {
-      llm_result <- list(answer = NULL, error = if (isTRUE(use_llm)) llm_status$provider else "LLM disabled.")
-    }
-    if (!isTRUE(answer_submitted) && practice_answer_evaluation_language(anchored_text)) {
-      anchored_text <- clean_tutor_markdown(anchored_answer$answer)
-      llm_result$error <- paste(c(llm_result$error %||% NA_character_, "pre_submit_evaluation_language_removed"), collapse = "; ")
-    }
     leak_check <- redact_practice_answer_leaks(
       answer = anchored_text,
       practice_context = practice_context,
@@ -1598,12 +1575,12 @@ generate_contextual_practice_help <- function(help_mode = c("hint", "concept", "
       answer_withheld = answer_withheld,
       current_question_id = practice_context$current_question_id %||% NA_character_,
       expected_concept_tag = practice_context$expected_concept_tag %||% NA_character_,
-      llm_error = llm_result$error %||% "practice_context_anchor",
+      llm_error = "practice_context_anchor",
       used_cached_evidence = used_cached_evidence,
       llm_calls_count = llm_calls_count,
       retrieval_time = retrieval_time,
       rerank_time = evidence_result$rerank_time %||% NA_real_,
-      generation_time = generation_time,
+      generation_time = 0,
       verifier_time = verifier_time,
       total_time = elapsed_seconds(total_start),
       stored_content_used = isTRUE(anchored_answer$stored_content_used),

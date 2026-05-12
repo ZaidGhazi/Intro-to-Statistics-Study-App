@@ -9,19 +9,6 @@ library(stringr)
 library(glue)
 library(htmltools)
 
-# shinyapps.io does not provide a secrets UI like Posit Connect. If a
-# deployment intentionally bundles a local .Renviron file, read it here so
-# Sys.getenv("ANTHROPIC_API_KEY") is available before tutor helpers run.
-load_app_environment <- function(path = ".Renviron") {
-  if (file.exists(path)) {
-    readRenviron(path)
-    message("[config] Loaded app environment from ", path)
-  }
-  invisible(TRUE)
-}
-
-load_app_environment()
-
 source("R/wiki.R")
 source("R/chunk_schema.R")
 source("R/aliases.R")
@@ -38,8 +25,8 @@ source("R/evals_vitals.R")
 # =========================
 # CONFIG
 # =========================
-APP_TITLE <- "Introduction to Statistics Study App"
-DB_PATH <- "intro_stats_study_app.sqlite"
+APP_TITLE <- "IntroStats Coach"
+DB_PATH <- "statquest.sqlite"
 QUESTION_BANK_PATH <- "data/processed/question_bank.csv"
 
 .app_cache <- new.env(parent = emptyenv())
@@ -74,7 +61,7 @@ MODULES <- tibble::tribble(
   "module_7", "Module 7: Confidence Intervals", 7L,
   "module_8", "Module 8: Hypothesis Testing", 8L,
   "module_9", "Module 9: Uses and Abuses of Tests", 9L,
-  "cumulative_review", "Cumulative Review", 10L
+  "cumulative_review", "Review All Modules", 10L
 )
 
 TOPIC_META <- tibble::tribble(
@@ -93,7 +80,7 @@ TOPIC_META <- tibble::tribble(
   "ht_prop", "Hypothesis Tests for Proportions", "module_8", "ht_prop", 12L,
   "ht_mean", "Hypothesis Tests for Means", "module_8", "ht_mean", 13L,
   "uses_abuses_tests", "Uses and Abuses of Tests", "module_9", "uses_abuses_tests", 14L,
-  "final_review", "Cumulative Review", "cumulative_review", "final_review", 15L
+  "final_review", "Review All Modules", "cumulative_review", "final_review", 15L
 ) %>%
   left_join(MODULES, by = "module_id") %>%
   arrange(module_order, topic_order)
@@ -980,6 +967,9 @@ stable_css <- "
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
+  .module-card-select-all {
+    margin-top: 0.8rem;
+  }
   .practice-session-meta {
     display: flex;
     flex-wrap: wrap;
@@ -1785,32 +1775,35 @@ module_button_id <- function(module_id) {
 
 render_module_button_grid <- function(selected_module_ids = character(), ns = identity) {
   selected_module_ids <- get_selected_modules(selected_module_ids)
-  div(
-    class = "module-card-grid",
-    lapply(seq_len(nrow(MODULES)), function(i) {
-      module_id <- MODULES$module_id[[i]]
-      module_label <- MODULES$module_label[[i]] %||% module_id
-      title <- if (str_detect(module_label, "^Module\\s+[0-9]+:")) {
-        str_extract(module_label, "^Module\\s+[0-9]+")
-      } else {
-        module_label
-      }
-      meta <- if (str_detect(module_label, "^Module\\s+[0-9]+:")) {
-        str_trim(str_remove(module_label, "^Module\\s+[0-9]+:\\s*"))
-      } else {
-        "Mixed practice across the course"
-      }
-      actionButton(
-        ns(module_button_id(module_id)),
-        label = tagList(
-          span(class = "module-card-order", title),
-          span(meta)
-        ),
-        class = paste("module-card-button", if (module_id %in% selected_module_ids) "selected" else "")
-      )
-    })
+  tagList(
+    div(
+      class = "module-card-grid",
+      lapply(seq_len(nrow(MODULES)), function(i) {
+        module_id <- MODULES$module_id[[i]]
+        module_label <- MODULES$module_label[[i]] %||% module_id
+        title <- if (str_detect(module_label, "^Module\\s+[0-9]+:")) {
+          str_extract(module_label, "^Module\\s+[0-9]+")
+        } else {
+          module_label
+        }
+        meta <- if (str_detect(module_label, "^Module\\s+[0-9]+:")) {
+          str_trim(str_remove(module_label, "^Module\\s+[0-9]+:\\s*"))
+        } else {
+          "Mixed practice across the course"
+        }
+        actionButton(
+          ns(module_button_id(module_id)),
+          label = tagList(
+            span(class = "module-card-order", title),
+            span(meta)
+          ),
+          class = paste("module-card-button", if (module_id %in% selected_module_ids) "selected" else "")
+        )
+      })
+    )
   )
 }
+
 resolve_practice_modules <- function(user_id, module_ids = NULL) {
   selected_modules <- get_selected_modules(module_ids)
   if (length(selected_modules) > 0) {
@@ -5075,18 +5068,9 @@ plan_next_practice_step <- function(user_id, current_question, is_correct, hints
     ))
   }
   
-  if (!is_concept_temporarily_mastered(user_id, current_question$concept_tag)) {
-    followup <- get_similar_question_or_fallback(
-      current_question,
-      module_ids = module_ids,
-      exclude_question_ids = exclude_question_ids
-    )
-    return(list(
-      question = followup$question,
-      message = "Good, one more to make sure it sticks.",
-      detail = followup$message
-    ))
-  }
+  # If the student answered correctly without using hints, advance instead of
+  # giving another near-duplicate of the same concept. Similar follow-up questions
+  # are reserved for incorrect answers or correct answers that required hints.
   
   next_topic <- choose_next_topic_after_mastery(
     user_id = user_id,
@@ -5108,112 +5092,6 @@ plan_next_practice_step <- function(user_id, current_question, is_correct, hints
     message = "Nice, moving to the next skill.",
     detail = if (!identical(next_topic, current_question$topic_id)) glue("Next focus: {get_topic_label(next_topic)}.") else "This module does not have another stored concept ready yet, so the app is keeping you nearby."
   )
-}
-
-
-feedback_text_is_weak <- function(text, correct_answer = NULL) {
-  text <- stringr::str_squish(as.character(text %||% ""))
-  correct_answer <- stringr::str_squish(paste(as.character(correct_answer %||% ""), collapse = ", "))
-  if (!nzchar(text)) {
-    return(TRUE)
-  }
-  if (nchar(text) < 35) {
-    return(TRUE)
-  }
-  if (nzchar(correct_answer) && identical(stringr::str_to_lower(text), stringr::str_to_lower(correct_answer))) {
-    return(TRUE)
-  }
-  if (stringr::str_detect(stringr::str_to_lower(text), "^the correct answer is\b")) {
-    return(TRUE)
-  }
-  FALSE
-}
-
-build_conceptual_feedback_explanation <- function(question, result = NULL) {
-  correct_answer <- result$correct_answer %||% question$correct_answer %||% "the listed answer"
-  correct_text <- stringr::str_squish(paste(as.character(correct_answer), collapse = ", "))
-  concept <- stringr::str_to_lower(question$concept_tag %||% "")
-  topic <- stringr::str_to_lower(question$topic_id %||% "")
-  prompt <- stringr::str_to_lower(question$question_text %||% "")
-
-  tailored <- dplyr::case_when(
-    stringr::str_detect(concept, "graph_selection") && stringr::str_detect(stringr::str_to_lower(correct_text), "histogram") ~
-      "A histogram is appropriate because the variable is quantitative and the goal is to display its distribution. Bar charts are for category counts, scatterplots compare two quantitative variables, and time plots require measurements over time.",
-    stringr::str_detect(concept, "graph_selection") && stringr::str_detect(stringr::str_to_lower(correct_text), "bar") ~
-      "A bar chart is appropriate because the variable is categorical or the goal is to compare counts/percents across groups. Histograms are reserved for quantitative measurements grouped into intervals.",
-    stringr::str_detect(concept, "graph_selection") && stringr::str_detect(stringr::str_to_lower(correct_text), "scatter") ~
-      "A scatterplot is appropriate when the goal is to display the relationship between two quantitative variables. Each point represents one individual measured on both variables.",
-    stringr::str_detect(concept, "graph_selection") && stringr::str_detect(stringr::str_to_lower(correct_text), "time") ~
-      "A time plot is appropriate when observations are recorded over time. Time belongs on the horizontal axis so that trends, cycles, or unusual changes are visible.",
-    stringr::str_detect(concept, "graph_selection") ~
-      "The graph choice follows from the variable type and the purpose of the display. Ask whether the data are categories, one quantitative variable, two quantitative variables, or measurements over time.",
-
-    stringr::str_detect(concept, "variable_classification") ~
-      "This question is about the type of variable. Categorical variables place individuals into groups or labels, while quantitative variables are numerical measurements where arithmetic such as averages makes sense.",
-    stringr::str_detect(concept, "data_context") ~
-      "A statistical data set should be read by identifying the individuals, the variables measured on those individuals, and the context. That context determines whether a number is meaningful and which method is appropriate.",
-    stringr::str_detect(concept, "statistical_thinking") ~
-      "The reasoning is based on statistical thinking: data have context, variation is expected, and conclusions should be tied back to how the data were collected and what the data can actually support.",
-
-    stringr::str_detect(concept, "resistant|skewness|outlier|center_spread|descriptive_summaries|spread_iqr") ~
-      "Extreme values affect some summaries more than others. The mean and standard deviation use the actual sizes of all observations, so outliers and skewness can pull them. The median, quartiles, and IQR are more resistant because they depend more on order or position.",
-
-    stringr::str_detect(concept, "z_score|standard_normal") ~
-      "A z-score standardizes a value by measuring how many standard deviations it is from the mean. Positive z-scores are above the mean, negative z-scores are below the mean, and z = 0 is exactly at the mean.",
-    stringr::str_detect(concept, "normal_probability") ~
-      "Normal probability questions use area under a Normal curve. After standardizing to z when needed, the relevant probability is the area to the left, right, or between the marked values.",
-    stringr::str_detect(concept, "empirical_rule") ~
-      "The 68-95-99.7 rule is a shortcut for Normal distributions: about 68% of observations fall within 1 standard deviation of the mean, 95% within 2, and 99.7% within 3.",
-
-    stringr::str_detect(concept, "probability_rules|complement|independence|conditional|probability_model|random_variable|disjoint") ~
-      "Probability questions depend on the event wording. Complements use 1 minus the probability of the opposite event, independence means one event does not change the probability of another, and conditional probability restricts attention to cases where a condition is already true.",
-    stringr::str_detect(concept, "binomial") ~
-      "A binomial setting has a fixed number of trials, each trial is success/failure, trials are independent, and the success probability stays the same. The random variable counts the number of successes.",
-
-    stringr::str_detect(concept, "association|correlation|lurking|causation") ~
-      "For relationships between variables, describe the direction, form, and strength, but be careful about causation. Association alone does not prove cause-and-effect because lurking variables may explain the pattern.",
-    stringr::str_detect(concept, "regression|residual|slope") ~
-      "Regression questions connect a fitted line to prediction and interpretation. The slope describes the predicted change in the response for a one-unit increase in the explanatory variable, while residuals measure observed minus predicted values.",
-
-    stringr::str_detect(concept, "sampling|bias|generalization|simple_random_sample|law_large_numbers") ~
-      "Sampling questions focus on how data were produced. Random sampling helps reduce selection bias and supports generalizing from a sample to a population; biased sampling methods can produce misleading conclusions even with a large sample.",
-    stringr::str_detect(concept, "experiment|random_assignment|control_group|placebo|blocking|blinding") ~
-      "Experiment questions focus on treatment assignment. Random assignment helps create comparable groups, control groups provide a baseline for comparison, and blinding/placebos help separate treatment effects from expectations or measurement bias.",
-
-    stringr::str_detect(concept, "sampling_distribution|central_limit|clt|standard_error|sampling_variability") ~
-      "Sampling-distribution questions are about how a statistic varies from sample to sample. Larger samples usually reduce standard error, and the Central Limit Theorem explains why sample means tend to have an approximately Normal sampling distribution under broad conditions.",
-
-    stringr::str_detect(concept, "ci_|confidence|margin_of_error|conditions_for_intervals|sample_size_ci|t_interval") ~
-      "A confidence interval estimates a population parameter using a statistic plus or minus a margin of error. Its interpretation is about the long-run success of the method, not the probability that a fixed computed interval contains the parameter.",
-
-    stringr::str_detect(concept, "p_value|hypothesis|test_statistic|decision_rule|null_alternative|alternative_hypothesis|type_i|testing|significance|conclusion_language|inference_cautions|multiple_testing|practical_significance") || stringr::str_detect(topic, "hypothesis|uses_abuses") ~
-      "Hypothesis tests measure how surprising the sample result would be if the null hypothesis were true. A small p-value gives evidence against the null, but failing to reject the null does not prove the null is true. Conclusions should be stated in cautious, contextual language.",
-
-    TRUE ~
-      "The correct choice follows from matching the wording of the question to the statistical idea being tested. Focus first on what kind of variable, parameter, graph, or inference procedure the question is describing, then choose the option that matches that role."
-  )
-
-  if (nzchar(correct_text)) {
-    paste0(tailored, " In this item, **", correct_text, "** is the best choice because it matches what the question is asking you to identify.")
-  } else {
-    tailored
-  }
-}
-
-get_feedback_explanation <- function(question, result = NULL) {
-  correct_answer <- result$correct_answer %||% question$correct_answer %||% ""
-  candidates <- c(
-    question$solution_explanation %||% "",
-    question$explanation %||% "",
-    question$concept_explanation %||% ""
-  )
-  candidates <- candidates[nzchar(stringr::str_squish(candidates))]
-  for (candidate in candidates) {
-    if (!feedback_text_is_weak(candidate, correct_answer = correct_answer)) {
-      return(candidate)
-    }
-  }
-  build_conceptual_feedback_explanation(question, result)
 }
 
 grade_practice_question <- function(question, response) {
@@ -6167,6 +6045,7 @@ student_server <- function(id, user_info) {
       })
     })
 
+
     practice_timer <- function(start_time) {
       round(as.numeric(difftime(Sys.time(), start_time, units = "secs")), 3)
     }
@@ -6331,46 +6210,78 @@ student_server <- function(id, user_info) {
       )
     }
 
-    is_generic_template_hint <- function(text) {
-      cleaned <- str_to_lower(str_squish(as.character(text %||% "")))
-      !nzchar(cleaned) ||
-        str_detect(cleaned, "focus on the phrase in the question that names the statistical idea") ||
-        str_detect(cleaned, "ask what object is being described") ||
-        str_detect(cleaned, "name what the question is asking for, then match")
+    is_generic_practice_hint_text <- function(text) {
+      text_norm <- str_to_lower(str_squish(as.character(text %||% "")))
+      if (!nzchar(text_norm)) {
+        return(TRUE)
+      }
+      generic_patterns <- c(
+        "focus on the phrase in the question that names the statistical idea",
+        "name what the question is asking for",
+        "match that to the relevant statistic",
+        "identify the concept first",
+        "focus on .* before doing any calculation",
+        "what quantity, variable type, or condition should you identify first"
+      )
+      any(str_detect(text_norm, generic_patterns))
     }
 
-    contextual_hint_for_question <- function(question) {
-      concept <- str_to_lower(as.character(question$concept_tag %||% question$topic_id %||% ""))
-      stem <- str_to_lower(as.character(question$question_text %||% ""))
-      combined <- paste(concept, stem, collapse = " ")
+    build_contextual_hint_from_question <- function(question) {
+      combined <- str_to_lower(paste(
+        question$question_text %||% "",
+        question$topic_label %||% "",
+        question$topic_id %||% "",
+        question$concept_tag %||% "",
+        question$solution_explanation %||% "",
+        paste(coerce_choice_values(question$answer_choices %||% character()), collapse = " "),
+        collapse = " "
+      ))
 
-      if (str_detect(combined, "resistant|nonresistant|mean|median|skew|outlier|measure of center")) {
-        return("Focus on the outliers. Which measure of center depends on the middle position instead of using every value?")
+      if (str_detect(combined, "lurking|confound|third variable|hidden variable|association.*caus|correlation.*caus|causation")) {
+        return("Look for whether a **third variable** could explain the relationship between the two variables. Association by itself does not prove that one variable caused the other.")
       }
-      if (str_detect(combined, "categorical|quantitative|variable_classification|variable type")) {
-        return("Ask whether the recorded values are category labels or meaningful measurements where arithmetic, like averaging, would make sense.")
+      if (str_detect(combined, "middle 50|iqr|interquartile|quartile|q1|q3|five[- ]?number")) {
+        return("Focus on the phrase **middle 50%**. Which spread measure is based on the distance from the first quartile, Q1, to the third quartile, Q3?")
       }
-      if (str_detect(combined, "graph|bar chart|histogram|scatterplot|time plot")) {
-        return("First decide what kind of variable or relationship is being displayed: categories, one quantitative distribution, two quantitative variables, or values over time.")
+      if (str_detect(combined, "density curve|under.*curve|area under|shaded area|normal curve|probability.*curve")) {
+        return("On a density curve, **probability is represented by area**. Look for the option that describes what the shaded region or region under the curve stands for.")
       }
-      if (str_detect(combined, "p-value|p value|hypothesis|null|alternative|significance")) {
-        return("Start by identifying the null claim and what result would count as evidence against it.")
+      if (str_detect(combined, "residual|observed.*predicted|predicted.*observed|regression line")) {
+        return("In regression, a **residual** is the vertical difference between an observed value and the value predicted by the line. Think: observed minus predicted.")
       }
-      if (str_detect(combined, "confidence|margin of error|interval")) {
-        return("Look for the estimate, the margin of error, and whether the question is asking about a plausible range for a population value.")
+      if (str_detect(combined, "scatterplot|association|correlation|direction|strength|form")) {
+        return("Focus on the overall pattern between two quantitative variables: direction, form, strength, and possible outliers. Do not turn association into causation unless the study design supports it.")
       }
-      if (str_detect(combined, "z-score|normal|normal_dist|normal distribution")) {
-        return("Translate the value into a z-score idea: how many standard deviations it is from the mean, then think about the shaded area.")
+      if (str_detect(combined, "bar chart|histogram|categorical|quantitative|variable type")) {
+        return("First decide whether the variable is made of **category labels** or measured/countable numbers. Categories usually call for bars; quantitative distributions usually call for histograms or boxplots.")
       }
-      if (str_detect(combined, "binomial")) {
-        return("Check the binomial setup first: fixed number of trials, two outcomes, same success probability, and independent trials.")
+      if (str_detect(combined, "z[- ]?score|standard normal|standardize|standard deviation units")) {
+        return("A z-score describes location in **standard-deviation units**. Ask whether the value is above or below the mean, and how many standard deviations away it is.")
       }
-      if (str_detect(combined, "sampling distribution|central limit|clt")) {
-        return("Separate the sample statistic from the population value, then think about how the statistic varies from sample to sample.")
+      if (str_detect(combined, "p[- ]?value|hypothesis|null|reject|significant")) {
+        return("Start by assuming the **null hypothesis** is true. Then ask how surprising the sample result would be under that assumption.")
+      }
+      if (str_detect(combined, "confidence interval|margin of error|estimate|plausible range")) {
+        return("A confidence interval is built around a **sample estimate** with a margin of error. Think about whether the statement is describing the interval procedure or the unknown population parameter.")
+      }
+      if (str_detect(combined, "p_hat|p-hat|sample proportion|p_0|population proportion|hypothesized proportion")) {
+        return("Keep the sample result separate from the null claim: **p-hat** comes from the data, while **p0** is the hypothesized population proportion.")
+      }
+      if (str_detect(combined, "statistic|parameter|sample|population")) {
+        return("Ask whether the number describes the **sample you observed** or the entire **population**. Sample summaries are statistics; population summaries are parameters.")
+      }
+      if (str_detect(combined, "binomial|success|trial|probability of success|independent")) {
+        return("Check the binomial setting: fixed number of trials, two outcomes, same probability of success, and independent trials.")
+      }
+      if (str_detect(combined, "random assignment|experiment|observational|treatment")) {
+        return("Separate **how subjects were selected** from **whether treatments were assigned**. Random assignment supports cause-and-effect conclusions better than observation alone.")
+      }
+      if (str_detect(combined, "mean|median|skew|outlier|resistant|center")) {
+        return("Think about whether extreme values should affect the summary. Measures based on positions are usually less pulled by outliers than measures using every value.")
       }
 
-      label <- get_concept_label(question$concept_tag %||% question$topic_id)
-      glue("Focus on the specific idea being tested here: {label}. What clue in the question tells you that this is the right concept?")
+      glue("Use the wording of this Module {str_extract(question$module_id %||% '', '\\d+') %||% ''} question to decide what is being asked, then match that idea to the best statistic, graph, condition, or interpretation.") %>%
+        str_squish()
     }
 
     build_hint_ladder <- function(question) {
@@ -6383,17 +6294,46 @@ student_server <- function(id, user_info) {
         as.character() %>%
         str_replace_all("[*_`>#]", " ") %>%
         map_chr(clean_student_facing_source_language) %>%
-        discard(is_generic_template_hint)
+        discard(~ !nzchar(.x)) %>%
+        discard(is_generic_practice_hint_text)
 
       hints <- c(
         stored_hints,
-        contextual_hint_for_question(question),
-        glue("Focus on {get_concept_label(question$concept_tag %||% question$topic_id)} before doing any calculation.")
-      ) %>%
-        as.character() %>%
-        map_chr(clean_student_facing_source_language)
-
+        build_contextual_hint_from_question(question),
+        "Name what the question is asking for, then match that wording to the relevant statistic, graph, condition, or interpretation."
+      )
       unique(hints[nzchar(hints)])
+    }
+
+    format_student_module_badge <- function(question) {
+      raw <- as.character(question$module_label %||% question$module_id %||% "current module")[[1]]
+      raw_id <- as.character(question$module_id %||% "")[[1]]
+      if (str_detect(str_to_lower(raw), "cumulative|review all") || str_detect(str_to_lower(raw_id), "cumulative")) {
+        return("Review All Modules")
+      }
+      number <- str_extract(paste(raw, raw_id), "\\d+")
+      if (!is.na(number) && nzchar(number)) {
+        return(glue("Module {number}"))
+      }
+      "Current Module"
+    }
+
+    clean_student_question_text <- function(question_text) {
+      # Remove generation/template instructions that should never be shown
+      # to students. These occasionally appear in LLM-created question-bank
+      # rows, so we clean them at render time and before sending context to
+      # the tutor.
+      text <- as.character(question_text %||% "")[[1]]
+      text %>%
+        str_replace(regex("^\\s*cumulative\\s+review\\s*:\\s*", ignore_case = TRUE), "") %>%
+        str_replace_all(regex("\\s*\\(\\s*cumulative\\s+review\\s*\\)", ignore_case = TRUE), "") %>%
+        str_replace_all(regex("\\s*\\[\\s*variant\\s*\\d+\\s*\\]", ignore_case = TRUE), "") %>%
+        str_replace_all(regex("\\s*\\(?\\s*variant\\s*\\d+\\s*\\)?", ignore_case = TRUE), "") %>%
+        str_replace_all(regex("\\s*use\\s+this\\s+as\\s+(?:another\\s+)?(?:short\\s+)?practice\\s+setting\\s*\\d*\\s*\\.?", ignore_case = TRUE), "") %>%
+        str_replace_all(regex("\\s*this\\s+is\\s+(?:another\\s+)?(?:short\\s+)?practice\\s+setting\\s*\\d*\\s*\\.?", ignore_case = TRUE), "") %>%
+        str_replace_all(regex("\\s*use\\s+as\\s+(?:another\\s+)?(?:short\\s+)?practice\\s+setting\\s*\\d*\\s*\\.?", ignore_case = TRUE), "") %>%
+        str_replace_all(regex("\\s*\\[\\s*generated[^\\]]*\\]", ignore_case = TRUE), "") %>%
+        str_squish()
     }
 
     build_fast_practice_help <- function(question, context, help_question, help_mode, cached) {
@@ -6881,7 +6821,7 @@ student_server <- function(id, user_info) {
         current_module_id = active_module_id,
         active_module_ids = active_module_ids,
         current_question_id = q$question_id,
-        question_text = q$question_text,
+        question_text = clean_student_question_text(q$question_text),
         topic_id = q$topic_id,
         module_id = q$module_id,
         answer_choices = q$choices,
@@ -6961,17 +6901,9 @@ student_server <- function(id, user_info) {
       } else {
         explicit_visual_request
       }
-      named_visual_type <- if (isTRUE(explicit_visual_request) && exists("choose_visual_type", mode = "function")) {
-        choose_visual_type(help_question, NULL)
-      } else {
-        NULL
-      }
-      question_has_linked_visual <- exists("has_question_visual_link", mode = "function") &&
-        isTRUE(has_question_visual_link(q))
-      deterministic_visual_type <- if (!is.null(named_visual_type) && nzchar(named_visual_type %||% "")) {
-        named_visual_type
-      } else if (isTRUE(attach_visual_to_turn) && !isTRUE(question_has_linked_visual) &&
-                 exists("strict_question_visual_type", mode = "function")) {
+      deterministic_visual_type <- if (isTRUE(explicit_visual_request)) {
+        choose_visual_type(help_question, q) %||% if (exists("strict_question_visual_type", mode = "function")) strict_question_visual_type(q) else NULL
+      } else if (isTRUE(attach_visual_to_turn) && exists("strict_question_visual_type", mode = "function")) {
         strict_question_visual_type(q)
       } else {
         NULL
@@ -6986,12 +6918,62 @@ student_server <- function(id, user_info) {
 
       tryCatch({
         context <- get_tutor_context(build_contextual_practice_help_context(help_mode))
+        if (isTRUE(explicit_visual_request) && !is.null(deterministic_visual_type) && nzchar(deterministic_visual_type %||% "")) {
+          context$requested_visual_type <- deterministic_visual_type
+          context$requested_visual_caption <- if (exists("visual_caption_for_type", mode = "function")) {
+            visual_caption_for_type(deterministic_visual_type)
+          } else {
+            deterministic_visual_type
+          }
+        }
         result <- withProgress(
           message = "Preparing help for this question...",
           value = 0.2,
           {
-            if (identical(help_mode, "hint") && !isTRUE(explicit_visual_request) && length(build_hint_ladder(q)) > 0) {
-              incProgress(0.55, detail = "Showing a stored hint")
+            if (FALSE && isTRUE(explicit_visual_request) && !is.null(deterministic_visual_type)) {
+              incProgress(0.75, detail = "Rendering a local visual aid")
+              retrieval_query <- build_question_retrieval_query(q)
+              current_module_id <- normalize_rag_module_id(q$module_id, query = q$question_text) %||%
+                topic_to_rag_module(q$topic_id)
+              list(
+                answer = visual_response_for_type(deterministic_visual_type),
+                help_mode = help_mode,
+                retrieval_query = retrieval_query,
+                evidence_used = tibble(),
+                visuals_used = tibble(),
+                confidence = "medium",
+                needs_clarification = FALSE,
+                hallucination_check = "skipped",
+                hallucination_score = NA_real_,
+                retrieval_trace = tibble(),
+                normalized_query = normalize_student_query(retrieval_query),
+                expanded_queries = expand_query(retrieval_query),
+                active_module_id = current_module_id,
+                current_module_id = current_module_id,
+                active_module_ids = get_selected_modules(practice_state$selected_modules),
+                inferred_module_id = route_question_to_module(retrieval_query, active_module_ids = get_selected_modules(practice_state$selected_modules)),
+                expanded_outside_active = FALSE,
+                expanded_outside_selected = FALSE,
+                answer_submitted = isTRUE(context$answer_submitted),
+                answer_withheld = TRUE,
+                current_question_id = context$current_question_id %||% q$question_id,
+                expected_concept_tag = context$expected_concept_tag %||% q$concept_tag,
+                llm_error = "deterministic_visual",
+                used_cached_evidence = FALSE,
+                llm_calls_count = 0L,
+                retrieval_time = 0,
+                rerank_time = 0,
+                generation_time = 0,
+                verifier_time = 0,
+                total_time = 0,
+                deterministic_visual_type = deterministic_visual_type,
+                deterministic_visual_caption = visual_caption_for_type(deterministic_visual_type)
+              )
+            } else if (identical(help_mode, "hint") &&
+                       !nzchar(Sys.getenv("ANTHROPIC_API_KEY")) &&
+                       !nzchar(Sys.getenv("OPENAI_API_KEY")) &&
+                       length(build_hint_ladder(q)) > 0) {
+              incProgress(0.55, detail = "Showing a contextual stored hint")
               cached <- if (!is.null(practice_state$evidence_cache)) {
                 get_cached_question_evidence(q)
               } else {
@@ -7027,21 +7009,28 @@ student_server <- function(id, user_info) {
                 cached = cached
               )
             } else {
-              incProgress(0.2, detail = "Using cached evidence for the current question")
-              cached <- get_cached_question_evidence(q)
-              visual_metadata <- cached$visuals
-              if (!is.null(deterministic_visual_type) && nzchar(deterministic_visual_type %||% "") &&
-                  exists("deterministic_visual_prompt_metadata", mode = "function")) {
-                visual_metadata <- bind_rows(
-                  deterministic_visual_prompt_metadata(
-                    visual_type = deterministic_visual_type,
-                    module_id = context$current_module_id %||% context$active_module_id,
-                    concept_tag = context$expected_concept_tag %||% q$concept_tag
+              use_fresh_followup <- identical(help_mode, "followup") || isTRUE(explicit_visual_request)
+              incProgress(
+                0.2,
+                detail = if (isTRUE(use_fresh_followup)) "Retrieving evidence for your follow-up" else "Using cached evidence for the current question"
+              )
+              cached <- if (isTRUE(use_fresh_followup)) {
+                list(
+                  evidence_result = NULL,
+                  visuals = NULL,
+                  retrieval_query = build_practice_retrieval_query(
+                    help_mode = help_mode,
+                    practice_context = context,
+                    help_question = help_question
                   ),
-                  visual_metadata %||% tibble()
+                  used_cached_evidence = FALSE,
+                  retrieval_time = 0,
+                  visual_time = 0
                 )
+              } else {
+                get_cached_question_evidence(q)
               }
-              incProgress(0.25, detail = "Building a grounded tutor response")
+              incProgress(0.25, detail = "Building a short grounded tutor response")
               help <- generate_contextual_practice_help(
                 help_mode = help_mode,
                 practice_context = context,
@@ -7051,10 +7040,10 @@ student_server <- function(id, user_info) {
                 current_module_id = context$current_module_id,
                 mode = context$mode,
                 professor_id = context$professor_id,
-                use_llm = isTRUE(explicit_visual_request) || !identical(help_mode, "hint"),
+                use_llm = TRUE,
                 evidence_result = cached$evidence_result,
-                visual_metadata = visual_metadata,
-                run_faithfulness = TRUE
+                visual_metadata = cached$visuals,
+                run_faithfulness = FALSE
               )
               incProgress(0.3, detail = "Applying answer-safety rules")
               help
@@ -7069,10 +7058,13 @@ student_server <- function(id, user_info) {
         tutor_state$last_help_mode <- result$help_mode %||% help_mode
         assistant_message_id <- new_tutor_message_id("assistant")
         if (isTRUE(explicit_visual_request) && !is.null(deterministic_visual_type)) {
+          # Keep the LLM/fallback text so the explanation stays tied to the actual
+          # student question. The deterministic visual is attached below.
           result$deterministic_visual_type <- deterministic_visual_type
           result$deterministic_visual_caption <- visual_caption_for_type(deterministic_visual_type)
           practice_state$practice_help <- result
           practice_state$practice_help_debug <- result
+          tutor_state$last_tutor_answer <- result$answer
         } else if (isTRUE(explicit_visual_request)) {
           result$deterministic_visual_type <- NA_character_
           result$deterministic_visual_caption <- NA_character_
@@ -7114,7 +7106,7 @@ student_server <- function(id, user_info) {
     }
 
     observeEvent(input$practice_help_ask, {
-      run_contextual_practice_help()
+      run_contextual_practice_help(forced_help_mode = "followup")
     })
 
     observeEvent(input$practice_help_hint, {
@@ -7134,8 +7126,8 @@ student_server <- function(id, user_info) {
           div(
             class = "practice-main-shell",
             card(
-              card_header("Introduction to Statistics Practice"),
-              div(class = "practice-setup-lead", "Choose a module and start practicing. The app will choose the question type, difficulty, and next step for you."),
+              card_header("Guided Introductory Statistics Practice"),
+              div(class = "practice-setup-lead", "Choose a module to practice, or choose Review All Modules for mixed practice across the course. The app selects questions automatically and provides guided tutor support when you need help."),
               div(
                 class = "practice-setup-stack",
                 div(
@@ -7178,9 +7170,7 @@ student_server <- function(id, user_info) {
           div(
             class = "practice-session-meta",
             span(class = "practice-badge", glue("Question {practice_state$session_question_number}")),
-            span(class = "practice-badge", q$module_label),
-            span(class = "practice-badge", q$topic_label),
-            span(class = "practice-badge", get_concept_label(q$concept_tag))
+            span(class = "practice-badge", format_student_module_badge(q))
           ),
           div(class = "practice-question-wrap", uiOutput(session$ns("practice_question"))),
           uiOutput(session$ns("practice_response_ui")),
@@ -7228,8 +7218,7 @@ student_server <- function(id, user_info) {
         if (!identical(q$visual_position %||% "above", "below")) {
           render_question_visuals(q)
         },
-        div(class = "practice-question-title", q$question_text),
-        p(class = "practice-topic-line", glue("Topic focus: {q$topic_label} | Skill: {get_concept_label(q$concept_tag)}")),
+        div(class = "practice-question-title", clean_student_question_text(q$question_text)),
         if (identical(q$visual_position %||% "above", "below")) {
           render_question_visuals(q)
         },
@@ -7414,7 +7403,7 @@ student_server <- function(id, user_info) {
             class = paste("help-entry", if (identical(role, "student")) "user" else "assistant"),
             p(strong(if (identical(role, "student")) "You" else "Tutor")),
             message_body,
-            p(class = "small-muted", glue("{turn$help_mode %||% 'follow-up'} | {turn$timestamp %||% ''}"))
+            p(class = "small-muted", glue("{turn$timestamp %||% ''}"))
           )
         }))
       }
@@ -7446,7 +7435,7 @@ student_server <- function(id, user_info) {
         card_header("Ask about this question"),
         p(
           class = "small-muted",
-          glue("Helping with: {q$module_label %||% 'current module'} / {get_concept_label(q$concept_tag %||% q$topic_id)}. Using current practice question context.")
+          glue("Using the current {format_student_module_badge(q)} question as context.")
         ),
         div(class = "help-thread", history_ui),
         div(
@@ -7667,7 +7656,7 @@ student_server <- function(id, user_info) {
           class = "practice-feedback-grid",
           div(class = "practice-feedback-line", strong("Your answer: "), user_answer),
           div(class = "practice-feedback-line", strong("Correct answer: "), correct_answer),
-          div(class = "practice-feedback-line", strong("Explanation: "), markdown_to_ui(get_feedback_explanation(q, result))),
+          div(class = "practice-feedback-line", strong("Explanation: "), markdown_to_ui(q$explanation %||% "No explanation available yet.")),
           div(class = "practice-feedback-line", strong("Up next: "), practice_state$next_step_message %||% "The app is choosing the next question."),
           if (!is.null(practice_state$next_step_detail) && nzchar(practice_state$next_step_detail)) {
             div(class = "practice-feedback-line", strong("Note: "), practice_state$next_step_detail)

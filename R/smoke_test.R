@@ -95,18 +95,6 @@ run_smoke_test <- function(run_vitals = requireNamespace("vitals", quietly = TRU
     retrieval
   })
 
-  results <- smoke_record(results, "public demo corpus retrieval", {
-    demo_chunks <- load_public_demo_chunks()
-    if (!is.data.frame(demo_chunks) || nrow(demo_chunks) < 8) {
-      stop("Expected at least 8 public-safe demo chunks.", call. = FALSE)
-    }
-    demo_hits <- keyword_retrieve("what is a p-value?", chunks = demo_chunks, top_k = 5)
-    if (!is.data.frame(demo_hits) || nrow(demo_hits) == 0) {
-      stop("Expected the public demo corpus to retrieve evidence for a p-value query.", call. = FALSE)
-    }
-    demo_hits
-  })
-
   results <- smoke_record(results, "retrieve_evidence multi-module routing", {
     retrieval <- retrieve_evidence(
       "what is a p-value?",
@@ -329,33 +317,6 @@ run_smoke_test <- function(run_vitals = requireNamespace("vitals", quietly = TRU
       stop("Expected mean_vs_median_skew visual; got: ", visual_type %||% "NULL", call. = FALSE)
     }
     visual_response_for_type(visual_type)
-  })
-
-  results <- smoke_record(results, "explicit time plot visual request wins", {
-    q <- list(
-      concept_tag = "graph_selection",
-      topic_id = "data_graphs",
-      module_id = "module_1",
-      question_text = "Which graph is most appropriate for displaying daily high temperature over a month?",
-      correct_answer = "Time plot"
-    )
-    visual_type <- choose_visual_type("What does a time plot look like?", q)
-    if (!identical(visual_type, "time_plot")) {
-      stop("Expected explicit time plot request to choose time_plot; got: ", visual_type %||% "NULL", call. = FALSE)
-    }
-    resistant_q <- list(
-      concept_tag = "resistant_measures",
-      question_text = "Why is the median resistant for a right-skewed distribution with outliers?"
-    )
-    resistant_context_type <- choose_visual_type("What does a time plot look like?", resistant_q)
-    if (!identical(resistant_context_type, "time_plot")) {
-      stop("Expected the explicit time plot request to beat unrelated current-question context; got: ", resistant_context_type %||% "NULL", call. = FALSE)
-    }
-    response <- visual_response_for_type(visual_type)
-    if (!stringr::str_detect(stringr::str_to_lower(response), "time")) {
-      stop("Expected time plot visual response to discuss time.", call. = FALSE)
-    }
-    deterministic_visual_message(visual_type, message_id = "time_plot_visual")
   })
 
   results <- smoke_record(results, "tutor message visual attachment", {

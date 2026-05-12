@@ -409,6 +409,64 @@ plot_sampling_distribution_clt <- function() {
   invisible(NULL)
 }
 
+plot_sampling_bias_diagram <- function() {
+  nodes <- data.frame(
+    label = c("Target
+population", "People who
+choose to respond", "Biased
+call-in sample"),
+    x = c(0.18, 0.52, 0.82),
+    y = c(0.62, 0.62, 0.62)
+  )
+  arrows <- data.frame(
+    x = c(0.29, 0.64),
+    xend = c(0.43, 0.73),
+    y = c(0.62, 0.62),
+    yend = c(0.62, 0.62)
+  )
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    return(
+      ggplot2::ggplot() +
+        ggplot2::geom_curve(
+          data = arrows,
+          ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
+          curvature = 0,
+          arrow = grid::arrow(length = grid::unit(0.03, "npc")),
+          linewidth = 0.8
+        ) +
+        ggplot2::geom_label(
+          data = nodes,
+          ggplot2::aes(x = x, y = y, label = label),
+          label.size = 0.4,
+          size = 4,
+          fontface = "bold",
+          fill = "#eef3fb"
+        ) +
+        ggplot2::annotate(
+          "text",
+          x = 0.52,
+          y = 0.36,
+          label = "Only people motivated enough to respond enter the sample",
+          size = 3.6
+        ) +
+        ggplot2::coord_cartesian(xlim = c(0, 1), ylim = c(0.25, 0.82), clip = "off") +
+        ggplot2::labs(
+          title = "Voluntary response / sampling bias",
+          subtitle = "A self-selected sample may not represent the full population",
+          x = NULL,
+          y = NULL
+        ) +
+        ggplot2::theme_void(base_size = 13)
+    )
+  }
+  graphics::plot.new()
+  graphics::plot.window(xlim = c(0, 1), ylim = c(0, 1))
+  graphics::text(nodes$x, nodes$y, nodes$label)
+  graphics::arrows(arrows$x, arrows$y, arrows$xend, arrows$yend, length = 0.08)
+  graphics::title("Voluntary response / sampling bias")
+  invisible(NULL)
+}
+
 visual_caption_for_type <- function(visual_type) {
   visual_type <- normalize_visual_type(visual_type)
   switch(
@@ -464,38 +522,6 @@ deterministic_visual_message <- function(visual_type,
     safe_for_deployment = TRUE,
     module_id = module_id %||% NA_character_,
     concept_tag = concept_tag %||% NA_character_
-  )
-}
-
-deterministic_visual_prompt_metadata <- function(visual_type,
-                                                 module_id = NULL,
-                                                 concept_tag = NULL) {
-  visual_type <- normalize_visual_type(visual_type)
-  if (is.null(visual_type) || is.na(visual_type) || !nzchar(visual_type)) {
-    return(tibble::tibble())
-  }
-  tibble::tibble(
-    image_id = visual_type,
-    module_id = module_id %||% NA_character_,
-    topic_id = NA_character_,
-    concept_tag = concept_tag %||% visual_type,
-    source_name = "deterministic_recreated_visual",
-    source_type = "recreated_visual",
-    chapter = NA_integer_,
-    section = NA_character_,
-    page_number = NA_integer_,
-    caption = visual_caption_for_type(visual_type),
-    nearby_text = paste(visual_type, visual_caption_for_type(visual_type)),
-    vision_description = paste(
-      "A deploy-safe recreated visual rendered in R/ggplot for the student's current tutor request.",
-      visual_caption_for_type(visual_type)
-    ),
-    file_path = NA_character_,
-    thumbnail_path = NA_character_,
-    display_permission_status = "created_by_us",
-    safe_for_deployment = TRUE,
-    tags = visual_type,
-    preferred_use = "tutor"
   )
 }
 
@@ -584,8 +610,9 @@ normalize_visual_type <- function(visual_type = NULL) {
     visual_type %in% c("recreated_confidence_interval_number_line", "confidence_interval_number_line", "ci_number_line", "margin_of_error_number_line") ~ "confidence_interval_number_line",
     visual_type %in% c("recreated_standard_normal_curve", "standard_normal_curve", "normal_curve_shading", "z_score_curve") ~ "standard_normal_curve",
     visual_type %in% c("recreated_scatterplot_association", "scatterplot_association", "correlation_scatterplot") ~ "scatterplot_association",
-    visual_type %in% c("time_plot", "time_series_plot", "timeplot", "line_plot_over_time") ~ "time_plot",
     visual_type %in% c("regression_residual_plot", "residual_plot", "regression_residuals") ~ "regression_residual_plot",
+    visual_type %in% c("lurking_variable_diagram", "lurking_variable", "confounding_diagram", "third_variable_diagram") ~ "lurking_variable_diagram",
+    visual_type %in% c("sampling_bias_diagram", "sampling_bias", "voluntary_response_bias", "self_selected_sample") ~ "sampling_bias_diagram",
     visual_type %in% c("recreated_bar_chart_categorical", "bar_chart_categorical") ~ "bar_chart_categorical",
     visual_type %in% c("recreated_histogram_quantitative", "histogram_quantitative") ~ "histogram_quantitative",
     visual_type %in% c("sampling_distribution_clt", "clt_sampling_distribution", "recreated_sampling_distribution_clt") ~ "sampling_distribution_clt",
@@ -602,16 +629,10 @@ choose_visual_type <- function(user_text = NULL,
                                current_question = NULL,
                                concept_tag = NULL,
                                module_id = NULL) {
-  user_only <- stringr::str_to_lower(user_text %||% "")
-  if (stringr::str_detect(user_only, "\\btime[- ]?plot\\b|over time|time series|trend over time")) return("time_plot")
-  if (stringr::str_detect(user_only, "\\bscatterplot\\b|scatter plot")) return("scatterplot_association")
-  if (stringr::str_detect(user_only, "\\bhistogram\\b")) return("histogram_quantitative")
-  if (stringr::str_detect(user_only, "\\bbar[- ]?chart\\b|bar graph")) return("bar_chart_categorical")
-  if (stringr::str_detect(user_only, "\\bboxplot\\b|box plot")) return("outlier_boxplot")
-
   combined <- question_combined_text(current_question, user_text, concept_tag, module_id)
 
-  if (stringr::str_detect(combined, "\\btime[- ]?plot\\b|over time|time series|trend over time")) return("time_plot")
+  if (stringr::str_detect(combined, "voluntary response|self[- ]?selected|call[- ]?in|sampling bias|biased sample|undercoverage|nonresponse|radio host|listeners.*call|choose to respond")) return("sampling_bias_diagram")
+  if (stringr::str_detect(combined, "lurking variable|confound|confounding|third variable|hidden variable|common cause")) return("lurking_variable_diagram")
   if (stringr::str_detect(combined, "residual|observed minus predicted")) return("regression_residual_plot")
   if (stringr::str_detect(combined, "scatterplot|correlation|association|regression|slope|explanatory|response")) return("scatterplot_association")
   if (stringr::str_detect(combined, "binomial|successes|trials|bins")) return("binomial_distribution_bars")
@@ -641,6 +662,8 @@ strict_question_visual_type <- function(current_question = NULL) {
   if (explicit_allowed) return(explicit_template)
 
   combined <- question_combined_text(current_question)
+  if (stringr::str_detect(combined, "voluntary response|self[- ]?selected|call[- ]?in|sampling bias|biased sample|undercoverage|nonresponse|radio host|listeners.*call|choose to respond")) return("sampling_bias_diagram")
+  if (stringr::str_detect(combined, "lurking variable|confound|confounding|third variable|hidden variable|common cause")) return("lurking_variable_diagram")
   if (stringr::str_detect(combined, "residual|observed minus predicted")) return("regression_residual_plot")
   if (stringr::str_detect(combined, "random assignment|treatment group|control group|placebo") && question_has_visual_language(current_question)) return("experiment_randomization_diagram")
   if (stringr::str_detect(combined, "binomial") && question_has_visual_language(current_question)) return("binomial_distribution_bars")
@@ -648,7 +671,6 @@ strict_question_visual_type <- function(current_question = NULL) {
   if (stringr::str_detect(combined, "p[- ]?value|tail area|rejection region") && stringr::str_detect(combined, "hypothesis|test|null|alpha|significance|shade|tail")) return("p_value_tail_area")
   if (stringr::str_detect(combined, "confidence interval|margin of error|number line|endpoint")) return("confidence_interval_number_line")
   if (stringr::str_detect(combined, "z[- ]?score|standard normal|normal curve|normal probability|shade|empirical rule")) return("standard_normal_curve")
-  if (stringr::str_detect(combined, "\\btime[- ]?plot\\b|over time|time series|trend over time")) return("time_plot")
   if (stringr::str_detect(combined, "scatterplot|correlation|association|regression|slope") && question_has_visual_language(current_question)) return("scatterplot_association")
   if (stringr::str_detect(combined, "sampling distribution|central limit|clt") && stringr::str_detect(combined, "spread|standard error|sample size|larger n|smaller n|n increases|n grows")) return("sampling_distribution_clt")
   if (stringr::str_detect(combined, "boxplot|outlier|iqr|interquartile") && stringr::str_detect(combined, "spread|quartile|iqr|five-number|five number|boxplot")) return("outlier_boxplot")
@@ -759,28 +781,6 @@ plot_comparing_groups_boxplots <- function() {
   invisible(NULL)
 }
 
-plot_time_plot <- function() {
-  months <- seq.Date(as.Date("2026-01-01"), by = "month", length.out = 12)
-  values <- c(42, 45, 48, 51, 55, 60, 64, 63, 59, 54, 49, 46)
-  df <- tibble::tibble(month = months, value = values)
-  if (requireNamespace("ggplot2", quietly = TRUE)) {
-    return(
-      ggplot2::ggplot(df, ggplot2::aes(x = month, y = value)) +
-        ggplot2::geom_line(color = "#4f7cac", linewidth = 1.2) +
-        ggplot2::geom_point(color = "#d1495b", size = 2.6) +
-        ggplot2::labs(
-          title = "Time plot",
-          subtitle = "Time goes on the horizontal axis so changes over time are visible",
-          x = "Time",
-          y = "Measured value"
-        ) +
-        ggplot2::theme_minimal(base_size = 13)
-    )
-  }
-  graphics::plot(months, values, type = "b", pch = 19, col = "#4f7cac", main = "Time plot", xlab = "Time", ylab = "Measured value")
-  invisible(NULL)
-}
-
 visual_caption_for_type <- function(visual_type) {
   visual_type <- normalize_visual_type(visual_type)
   switch(
@@ -792,7 +792,6 @@ visual_caption_for_type <- function(visual_type) {
     confidence_interval_number_line = "A confidence interval is estimate ± margin of error, shown as a plausible range for the population parameter.",
     standard_normal_curve = "A z-score marks how many standard deviations a value is from the mean on the standard normal curve.",
     scatterplot_association = "A scatterplot shows the direction, form, and strength of association between two quantitative variables.",
-    time_plot = "A time plot puts time on the horizontal axis and connects measurements in time order to show trends or changes.",
     regression_residual_plot = "Residuals are the vertical gaps between observed points and the fitted regression line.",
     bar_chart_categorical = "A bar chart compares counts across categories.",
     histogram_quantitative = "A histogram shows the distribution of a quantitative variable across adjacent intervals.",
@@ -816,7 +815,6 @@ visual_response_for_type <- function(visual_type) {
     confidence_interval_number_line = paste("### Visual aid", "", "I added a number-line view of a confidence interval.", "", "- The center is the sample estimate.", "- The endpoints are estimate ± margin of error.", "- The whole interval is a plausible range for the population parameter.", "", "**Quick check:** Are you describing the sample statistic or the unknown population parameter?", sep = "\n"),
     standard_normal_curve = paste("### Visual aid", "", "I added a normal-curve view.", "", "- The center is the mean.", "- A z-score marks distance from the mean in standard-deviation units.", "- Shaded regions represent probabilities.", "", "**Quick check:** Is the value above or below the mean?", sep = "\n"),
     scatterplot_association = paste("### Visual aid", "", "I added a scatterplot view of association.", "", "- Each point represents one case.", "- The overall pattern shows direction and strength.", "- A trend does not prove causation by itself.", "", "**Quick check:** Does the problem ask about association, prediction, or causation?", sep = "\n"),
-    time_plot = paste("### Visual aid", "", "I added a time plot below.", "", "- Time is on the horizontal axis.", "- The connected points show how one measured value changes over time.", "- Look for trends, cycles, or unusual jumps.", "", "**Quick check:** What changes as you move from left to right across time?", sep = "\n"),
     regression_residual_plot = paste("### Visual aid", "", "I added a regression visual. The dashed vertical gaps show residuals.", "", "- A **residual** is observed minus predicted.", "- Points far from the line have large residuals.", "- Regression describes association and prediction, not automatic causation.", sep = "\n"),
     binomial_distribution_bars = paste("### Visual aid", "", "I added a binomial distribution. Each bar is the probability of a possible count of successes.", "", "**Quick check:** What are the fixed number of trials and the definition of success?", sep = "\n"),
     experiment_randomization_diagram = paste("### Visual aid", "", "I added a simple experiment diagram. Random assignment sends subjects into treatment groups by chance.", "", "**Quick check:** Is the study selecting a sample, assigning treatments, or both?", sep = "\n"),
@@ -839,8 +837,235 @@ render_stat2331_visual <- function(visual_type) {
     confidence_interval_number_line = plot_confidence_interval_number_line(),
     standard_normal_curve = plot_standard_normal_curve(),
     scatterplot_association = plot_scatterplot_association(),
-    time_plot = plot_time_plot(),
     regression_residual_plot = plot_regression_residual_plot(),
+    bar_chart_categorical = plot_bar_chart_categorical(),
+    histogram_quantitative = plot_histogram_quantitative(),
+    sampling_distribution_clt = plot_sampling_distribution_clt(),
+    binomial_distribution_bars = plot_binomial_distribution_bars(),
+    experiment_randomization_diagram = plot_experiment_randomization_diagram(),
+    two_way_table_segmented_bar = plot_two_way_table_segmented_bar(),
+    comparing_groups_boxplots = plot_comparing_groups_boxplots(),
+    NULL
+  )
+  if (inherits(plot_obj, "ggplot")) print(plot_obj)
+  invisible(plot_obj)
+}
+
+# -----------------------------------------------------------------------------
+# Final presentation-polish overrides
+# These definitions intentionally appear at the end of the file so they override
+# earlier generic visual routing. The goal is to keep deterministic visuals, but
+# make them better aligned with the active practice question.
+# -----------------------------------------------------------------------------
+
+normalize_visual_type <- function(visual_type = NULL) {
+  visual_type <- stringr::str_to_lower(as.character(visual_type %||% ""))
+  visual_type <- stringr::str_replace_all(visual_type, "[^a-z0-9]+", "_")
+  visual_type <- stringr::str_replace_all(visual_type, "^_|_$", "")
+  dplyr::case_when(
+    visual_type %in% c(
+      "mean_vs_median_skew", "right_skew_mean_median", "right_skewed_mean_median",
+      "skew_mean_median", "resistant_measures", "mean_median_outliers", "skewness_outliers"
+    ) ~ "mean_vs_median_skew",
+    visual_type %in% c("outlier_boxplot", "boxplot_outliers", "outliers_boxplot", "iqr_boxplot", "middle_50_boxplot") ~ "outlier_boxplot",
+    visual_type %in% c("bar_vs_histogram", "bar_chart_vs_histogram", "graph_type_comparison") ~ "bar_vs_histogram",
+    visual_type %in% c("recreated_p_value_tail_area", "p_value_tail_area", "p_value_tail", "tail_area", "hypothesis_test_tail") ~ "p_value_tail_area",
+    visual_type %in% c("recreated_confidence_interval_number_line", "confidence_interval_number_line", "ci_number_line", "margin_of_error_number_line") ~ "confidence_interval_number_line",
+    visual_type %in% c("recreated_standard_normal_curve", "standard_normal_curve", "normal_curve_shading", "z_score_curve", "density_curve_area") ~ "standard_normal_curve",
+    visual_type %in% c("recreated_scatterplot_association", "scatterplot_association", "correlation_scatterplot") ~ "scatterplot_association",
+    visual_type %in% c("regression_residual_plot", "residual_plot", "observed_predicted_residual") ~ "regression_residual_plot",
+    visual_type %in% c("lurking_variable_diagram", "confounding_diagram", "third_variable_diagram", "causal_lurking_diagram") ~ "lurking_variable_diagram",
+    visual_type %in% c("sampling_bias_diagram", "voluntary_response_diagram", "call_in_sample_diagram", "biased_sample_diagram") ~ "sampling_bias_diagram",
+    visual_type %in% c("recreated_bar_chart_categorical", "bar_chart_categorical") ~ "bar_chart_categorical",
+    visual_type %in% c("recreated_histogram_quantitative", "histogram_quantitative") ~ "histogram_quantitative",
+    visual_type %in% c("sampling_distribution_clt", "clt_sampling_distribution", "recreated_sampling_distribution_clt") ~ "sampling_distribution_clt",
+    visual_type %in% c("binomial_distribution_bars", "recreated_binomial_distribution_bars") ~ "binomial_distribution_bars",
+    visual_type %in% c("experiment_randomization_diagram", "recreated_experiment_randomization_diagram") ~ "experiment_randomization_diagram",
+    visual_type %in% c("two_way_table_segmented_bar", "recreated_two_way_table_segmented_bar") ~ "two_way_table_segmented_bar",
+    visual_type %in% c("comparing_groups_boxplots", "group_boxplots", "boxplots_compare_groups") ~ "comparing_groups_boxplots",
+    nzchar(visual_type) ~ visual_type,
+    TRUE ~ NA_character_
+  )
+}
+
+choose_visual_type <- function(user_text = NULL,
+                               current_question = NULL,
+                               concept_tag = NULL,
+                               module_id = NULL) {
+  combined <- question_combined_text(current_question, user_text, concept_tag, module_id)
+
+  # Concept-specific visuals should win before broad words like regression or association.
+  if (stringr::str_detect(combined, "voluntary response|call in|call-in|self selected|self-selected|sampling bias|biased sample|nonresponse|undercoverage|radio host|listeners")) {
+    return("sampling_bias_diagram")
+  }
+  if (stringr::str_detect(combined, "lurking|confound|third variable|hidden variable|association.*caus|correlation.*caus|cause[- ]?and[- ]?effect|causation")) {
+    return("lurking_variable_diagram")
+  }
+  if (stringr::str_detect(combined, "residual|observed.*predicted|predicted.*observed")) {
+    return("regression_residual_plot")
+  }
+  if (stringr::str_detect(combined, "middle 50|iqr|interquartile|quartile|q1|q3|five[- ]?number")) {
+    return("outlier_boxplot")
+  }
+  if (stringr::str_detect(combined, "density curve|area under|under.*curve|normal curve|z[- ]?score|standard normal|shaded area")) {
+    return("standard_normal_curve")
+  }
+  if (stringr::str_detect(combined, "p[- ]?value|p value|tail area|rejection region|significance|hypothesis test")) {
+    return("p_value_tail_area")
+  }
+  if (stringr::str_detect(combined, "confidence interval|margin of error|plausible range|estimate|interval")) {
+    return("confidence_interval_number_line")
+  }
+  if (stringr::str_detect(combined, "bar chart|histogram|categorical|quantitative|variable type|graph selection")) {
+    return("bar_vs_histogram")
+  }
+  if (stringr::str_detect(combined, "scatterplot|correlation|association|regression|slope|explanatory|response")) {
+    return("scatterplot_association")
+  }
+  if (stringr::str_detect(combined, "resistant|nonresistant|non resistant|right-skew|right skew|skewed|outlier|extreme value|measure of center")) {
+    return("mean_vs_median_skew")
+  }
+  if (stringr::str_detect(combined, "sampling distribution|central limit|standard error|larger sample|sample size")) {
+    return("sampling_distribution_clt")
+  }
+  if (stringr::str_detect(combined, "binomial|successes|fixed number of trials")) {
+    return("binomial_distribution_bars")
+  }
+  if (stringr::str_detect(combined, "random assignment|treatment group|experiment")) {
+    return("experiment_randomization_diagram")
+  }
+  if (stringr::str_detect(combined, "two[- ]?way table|conditional distribution|segmented bar")) {
+    return("two_way_table_segmented_bar")
+  }
+  NULL
+}
+
+strict_question_visual_type <- function(current_question = NULL) {
+  if (is.null(current_question)) {
+    return(NULL)
+  }
+  explicit_template <- normalize_visual_type(current_question$visual_template_id %||% "")
+  if (!is.na(explicit_template) && nzchar(explicit_template)) {
+    return(explicit_template)
+  }
+  choose_visual_type(user_text = "", current_question = current_question)
+}
+
+plot_lurking_variable_diagram <- function() {
+  nodes <- data.frame(
+    label = c("Lurking\nvariable", "Variable X", "Variable Y"),
+    x = c(0.5, 0.2, 0.8),
+    y = c(0.82, 0.25, 0.25)
+  )
+  edges <- data.frame(
+    x = c(0.46, 0.54, 0.2),
+    y = c(0.72, 0.72, 0.25),
+    xend = c(0.24, 0.76, 0.8),
+    yend = c(0.36, 0.36, 0.25),
+    type = c("hidden influence", "hidden influence", "observed association")
+  )
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    return(
+      ggplot2::ggplot() +
+        ggplot2::geom_segment(
+          data = edges,
+          ggplot2::aes(x = x, y = y, xend = xend, yend = yend, linetype = type),
+          arrow = grid::arrow(length = grid::unit(0.18, "inches")),
+          linewidth = 1,
+          color = "#3d405b"
+        ) +
+        ggplot2::geom_label(
+          data = nodes,
+          ggplot2::aes(x = x, y = y, label = label),
+          label.size = 0.4,
+          size = 4.5,
+          fill = "#f8f9fb",
+          color = "#1f2937"
+        ) +
+        ggplot2::scale_linetype_manual(values = c("hidden influence" = "solid", "observed association" = "dashed")) +
+        ggplot2::coord_cartesian(xlim = c(0, 1), ylim = c(0.05, 0.95), expand = FALSE) +
+        ggplot2::labs(
+          title = "Lurking variable idea",
+          subtitle = "A hidden third variable can make two observed variables look related",
+          x = NULL,
+          y = NULL,
+          linetype = NULL
+        ) +
+        ggplot2::theme_void(base_size = 13) +
+        ggplot2::theme(legend.position = "bottom")
+    )
+  }
+  graphics::plot.new()
+  graphics::plot.window(xlim = c(0, 1), ylim = c(0, 1))
+  graphics::text(nodes$x, nodes$y, nodes$label)
+  graphics::arrows(edges$x, edges$y, edges$xend, edges$yend, length = 0.08)
+  graphics::title("Lurking variable idea")
+  invisible(NULL)
+}
+
+visual_caption_for_type <- function(visual_type) {
+  visual_type <- normalize_visual_type(visual_type)
+  switch(
+    visual_type,
+    mean_vs_median_skew = "In a right-skewed distribution, a few extreme high values pull the mean to the right. The median stays closer to the typical case, which is why it is more resistant.",
+    outlier_boxplot = "A boxplot's box runs from Q1 to Q3. That box represents the middle 50% of the data, and its width is the interquartile range.",
+    bar_vs_histogram = "A bar chart separates categories, while a histogram uses touching bins for a quantitative variable.",
+    p_value_tail_area = "The shaded tail represents results as extreme as, or more extreme than, the observed statistic under the null model.",
+    confidence_interval_number_line = "A confidence interval is estimate ± margin of error, shown as a plausible range for the population parameter.",
+    standard_normal_curve = "Area under a density curve represents probability; on a normal curve, marked regions can show probabilities or z-score locations.",
+    scatterplot_association = "A scatterplot shows the direction, form, and strength of association between two quantitative variables.",
+    regression_residual_plot = "Residuals are the vertical gaps between observed points and the fitted regression line.",
+    lurking_variable_diagram = "A lurking variable is a hidden third variable that can help explain an observed relationship between two variables.",
+    sampling_bias_diagram = "A voluntary-response or self-selected sample can be biased because people with strong opinions are more likely to respond.",
+    bar_chart_categorical = "A bar chart compares counts across categories.",
+    histogram_quantitative = "A histogram shows the distribution of a quantitative variable across adjacent intervals.",
+    sampling_distribution_clt = "A larger sample size reduces standard error, so the sampling distribution is narrower.",
+    binomial_distribution_bars = "A binomial distribution gives probabilities for counts of successes in a fixed number of independent trials.",
+    experiment_randomization_diagram = "Random assignment helps create comparable treatment groups in an experiment.",
+    two_way_table_segmented_bar = "Segmented bars compare conditional distributions across groups in a two-way table.",
+    comparing_groups_boxplots = "Side-by-side boxplots compare center, spread, and possible outliers across groups.",
+    "This visual is an illustrative aid for the current practice question."
+  )
+}
+
+visual_response_for_type <- function(visual_type) {
+  visual_type <- normalize_visual_type(visual_type)
+  response <- switch(
+    visual_type,
+    mean_vs_median_skew = paste("### Visual aid", "", "The visual is meant to show how shape and outliers affect measures of center.", "", "- Extreme values pull the **mean** toward the tail.", "- The **median** stays tied to the middle position.", "- Use this to decide which summary better represents a typical value.", sep = "\n"),
+    outlier_boxplot = paste("### Visual aid", "", "Use the boxplot to focus on the middle half of the data.", "", "- The left edge of the box is **Q1**.", "- The right edge of the box is **Q3**.", "- The box from Q1 to Q3 contains the **middle 50%** of the observations.", "", "**Quick check:** Which spread measure is Q3 minus Q1?", sep = "\n"),
+    bar_vs_histogram = paste("### Visual aid", "", "Compare the variable type before choosing a graph.", "", "- A **bar chart** uses separated bars for categories.", "- A **histogram** uses touching bins for quantitative values.", sep = "\n"),
+    standard_normal_curve = paste("### Visual aid", "", "For density curves, the key picture is the **area under the curve**.", "", "- Total area under the curve is 1.", "- A shaded region represents probability for values in that region.", "- A z-score marks location in standard-deviation units.", sep = "\n"),
+    p_value_tail_area = paste("### Visual aid", "", "The shaded tail shows the p-value idea.", "", "- Start by assuming the null hypothesis is true.", "- Then ask how far into the tail the observed statistic falls.", sep = "\n"),
+    confidence_interval_number_line = paste("### Visual aid", "", "A confidence interval can be pictured on a number line.", "", "- The center is the sample estimate.", "- The endpoints are estimate ± margin of error.", sep = "\n"),
+    scatterplot_association = paste("### Visual aid", "", "A scatterplot helps you see association between two quantitative variables.", "", "- Each point is one case.", "- The pattern can show direction, form, strength, and outliers.", "- A pattern alone does not prove causation.", sep = "\n"),
+    regression_residual_plot = paste("### Visual aid", "", "A residual is shown as the vertical gap from a point to the regression line.", "", "- Residual = observed value − predicted value.", "- A larger vertical gap means a larger residual.", sep = "\n"),
+    lurking_variable_diagram = paste("### Visual aid", "", "This diagram shows why association does not automatically mean causation.", "", "- A hidden third variable can affect both observed variables.", "- That can make the two observed variables look related.", "- In the question, look for whether another factor could explain the relationship.", sep = "\n"),
+    sampling_bias_diagram = paste("### Visual aid", "", "This diagram shows the sampling-bias issue in a call-in or self-selected sample.", "", "- The full population is broader than the people who choose to respond.", "- People with strong opinions may be overrepresented.", "- In the question, ask whether the sample can fairly represent the population.", sep = "\n"),
+    sampling_distribution_clt = paste("### Visual aid", "", "A sampling distribution shows how a statistic varies from sample to sample.", "", "- Larger samples make the sampling distribution narrower.", "- The spread is the standard error.", sep = "\n"),
+    binomial_distribution_bars = paste("### Visual aid", "", "Each bar is the probability of a possible count of successes.", "", "**Quick check:** What counts as a success in the problem?", sep = "\n"),
+    experiment_randomization_diagram = paste("### Visual aid", "", "Random assignment sends subjects to treatment groups by chance.", "", "**Quick check:** Is the study assigning treatments or only observing people?", sep = "\n"),
+    two_way_table_segmented_bar = paste("### Visual aid", "", "Segmented bars compare conditional distributions across groups.", "", "**Quick check:** Are you comparing counts or percents within groups?", sep = "\n"),
+    comparing_groups_boxplots = paste("### Visual aid", "", "Side-by-side boxplots compare center, spread, and possible outliers across groups.", sep = "\n"),
+    paste("### Visual aid", "", "Use the picture to connect the labeled shape, area, interval, or pattern back to this exact question.", sep = "\n")
+  )
+  stringr::str_trim(response)
+}
+
+render_stat2331_visual <- function(visual_type) {
+  visual_type <- normalize_visual_type(visual_type)
+  plot_obj <- switch(
+    visual_type,
+    mean_vs_median_skew = plot_mean_vs_median_skew(),
+    outlier_boxplot = plot_outlier_boxplot(),
+    bar_vs_histogram = plot_bar_vs_histogram(),
+    p_value_tail_area = plot_p_value_tail_area(),
+    confidence_interval_number_line = plot_confidence_interval_number_line(),
+    standard_normal_curve = plot_standard_normal_curve(),
+    scatterplot_association = plot_scatterplot_association(),
+    regression_residual_plot = plot_regression_residual_plot(),
+    lurking_variable_diagram = plot_lurking_variable_diagram(),
+    sampling_bias_diagram = plot_sampling_bias_diagram(),
     bar_chart_categorical = plot_bar_chart_categorical(),
     histogram_quantitative = plot_histogram_quantitative(),
     sampling_distribution_clt = plot_sampling_distribution_clt(),
