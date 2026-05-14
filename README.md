@@ -6,6 +6,8 @@
 
 **Live demo:** https://zaidghazi.shinyapps.io/intro-statistics-study-app/
 
+**Walkthrough video:** [Watch the quick project walkthrough on YouTube](https://www.youtube.com/watch?v=0MjF9uAxGog)
+
 This is a portfolio and course project proof of concept. The goal is to demonstrate an educational LLM workflow: ordinary practice stays fast and local, while the tutor uses current-question context, retrieved evidence, and guardrails when students ask for help.
 
 ## What the app does
